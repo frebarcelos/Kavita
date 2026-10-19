@@ -162,6 +162,10 @@ public class AppUserPreferences
     /// </summary>
     public bool CollapseSeriesRelationships { get; set; } = false;
     /// <summary>
+    /// UI Site Global Setting: Opening a library shows its folder tree instead of the series grid
+    /// </summary>
+    public bool BrowseLibrariesByFolder { get; set; } = true;
+    /// <summary>
     /// UI Site Global Setting: The language locale that should be used for the user
     /// </summary>
     public string Locale { get; set; }

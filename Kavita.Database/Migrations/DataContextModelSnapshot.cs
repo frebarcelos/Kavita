@@ -3170,6 +3170,9 @@ namespace Kavita.Database.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("Dark");
 
+                    b.Property<bool>("BrowseLibrariesByFolder")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("CollapseSeriesRelationships")
                         .HasColumnType("INTEGER");
 

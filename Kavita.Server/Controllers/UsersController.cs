@@ -147,6 +147,10 @@ public class UsersController(
         existingPreferences.PromptForDownloadSize = preferencesDto.PromptForDownloadSize;
         existingPreferences.NoTransitions = preferencesDto.NoTransitions;
         existingPreferences.CollapseSeriesRelationships = preferencesDto.CollapseSeriesRelationships;
+        if (preferencesDto.BrowseLibrariesByFolder is { } browseByFolder)
+        {
+            existingPreferences.BrowseLibrariesByFolder = browseByFolder;
+        }
         existingPreferences.ColorScapeEnabled = preferencesDto.ColorScapeEnabled;
         existingPreferences.BookReaderHighlightSlots = preferencesDto.BookReaderHighlightSlots;
         existingPreferences.DataSaver = preferencesDto.DataSaver;

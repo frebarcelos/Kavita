@@ -32,6 +32,9 @@ public sealed record UserPreferencesDto
     /// <inheritdoc cref="AppUserPreferences.CollapseSeriesRelationships"/>
     [Required]
     public bool CollapseSeriesRelationships { get; set; } = false;
+    /// <inheritdoc cref="AppUserPreferences.BrowseLibrariesByFolder"/>
+    /// <remarks>Optional on update: clients that do not send it keep the stored choice</remarks>
+    public bool? BrowseLibrariesByFolder { get; set; }
     /// <inheritdoc cref="AppUserPreferences.Locale"/>
     [Required]
     public string Locale { get; set; }
