@@ -286,6 +286,20 @@ public class LibraryController(
     }
 
     /// <summary>
+    /// The library's series the user may see, each with its folder relative to the library root, to browse it as a
+    /// folder tree. Paths are never absolute.
+    /// </summary>
+    /// <param name="libraryId"></param>
+    /// <returns></returns>
+    [LibraryAccess]
+    [HttpGet("folder-series")]
+    public async Task<ActionResult<IList<FolderSeriesDto>>> GetFolderSeries(int libraryId)
+    {
+        var ct = HttpContext.RequestAborted;
+        return Ok(await unitOfWork.SeriesRepository.GetFolderSeriesAsync(libraryId, UserId, ct));
+    }
+
+    /// <summary>
     /// Grants a user account access to a Library
     /// </summary>
     /// <param name="updateLibraryForUserDto"></param>

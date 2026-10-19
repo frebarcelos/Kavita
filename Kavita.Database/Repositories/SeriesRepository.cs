@@ -1849,6 +1849,46 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
             .AnyAsync(ct);
     }
 
+    public async Task<IList<FolderSeriesDto>> GetFolderSeriesAsync(int libraryId, int userId, CancellationToken ct = default)
+    {
+        var roots = (await context.FolderPath
+                .Where(f => f.LibraryId == libraryId)
+                .Select(f => f.Path)
+                .ToListAsync(ct))
+            .Select(TrimFolder)
+            .ToList();
+        var userRating = await context.AppUser.GetUserAgeRestriction(userId, ct);
+        var series = await context.Series
+            .Where(s => s.LibraryId == libraryId && s.FolderPath != null)
+            .RestrictAgainstAgeRestriction(userRating)
+            .Select(s => new { s.Id, s.FolderPath })
+            .ToListAsync(ct);
+
+        var folders = new List<FolderSeriesDto>(series.Count);
+        foreach (var s in series)
+        {
+            var folder = TrimFolder(s.FolderPath!);
+            // The longest root wins when roots are nested; series outside every root are not exposed
+            var root = roots
+                .Where(r => folder == r || folder.StartsWith(r + "/", StringComparison.Ordinal))
+                .MaxBy(r => r.Length);
+            if (root == null) continue;
+
+            var relative = folder.Length == root.Length ? string.Empty : folder[(root.Length + 1)..];
+            if (roots.Count > 1)
+            {
+                var rootName = root[(root.LastIndexOf('/') + 1)..];
+                relative = relative.Length == 0 ? rootName : $"{rootName}/{relative}";
+            }
+
+            folders.Add(new FolderSeriesDto(s.Id, relative));
+        }
+
+        return folders;
+
+        static string TrimFolder(string path) => path.Replace('\\', '/').TrimEnd('/');
+    }
+
     public async Task<IList<SeriesNameMatch>> GetSeriesNameMatchesAsync(int libraryId, CancellationToken ct = default)
     {
         return await context.Series

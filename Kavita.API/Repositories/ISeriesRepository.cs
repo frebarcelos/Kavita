@@ -126,6 +126,8 @@ public interface ISeriesRepository
     /// <param name="seriesId">Only this series' files, for a series scan</param>
     Task<IDictionary<string, IList<SeriesModified>>> GetFolderPathMapAsync(int libraryId, int? seriesId = null, CancellationToken ct = default);
     Task<IList<SeriesNameMatch>> GetSeriesNameMatchesAsync(int libraryId, CancellationToken ct = default);
+    /// <summary>The library's series the user may see, each with its folder relative to the library root</summary>
+    Task<IList<FolderSeriesDto>> GetFolderSeriesAsync(int libraryId, int userId, CancellationToken ct = default);
     Task<AgeRating> GetMaxAgeRatingFromSeriesAsyncAsync(IEnumerable<int> seriesIds, CancellationToken ct = default);
     Task<IList<SeriesMetadataDto>> GetSeriesMetadataForIdsAsync(IEnumerable<int> seriesIds, CancellationToken ct = default);
     Task<IList<Series>> GetAllWithCoversInDifferentEncodingAsync(EncodeFormat encodeFormat, bool customOnly = true, CancellationToken ct = default);
