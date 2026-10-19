@@ -83,7 +83,7 @@ import {ReaderMode} from "../../../_models/preferences/reader-mode";
 import {ReadingDirection} from "../../../_models/preferences/reading-direction";
 import {PageSplitOption} from "../../../_models/preferences/page-split-option";
 import {LibraryType} from "../../../_models/library/library";
-import {MangaFormat} from "../../../_models/manga-format";
+import {opensInOtherReader} from "../../../_helpers/reader-format";
 import {Stack} from "../../../shared/data-structures/stack";
 import {SwipeEvent} from "../../../ng-swipe/ag-swipe.core";
 import {ModalService} from "../../../_services/modal.service";
@@ -1162,8 +1162,8 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       chapterInfo: this.readerService.getChapterInfo(this.chapterId(), true),
       bookmarks: this.readerService.getBookmarks(this.chapterId()),
     }).subscribe(results => {
-      if (this.readingListMode && (results.chapterInfo.seriesFormat === MangaFormat.EPUB || results.chapterInfo.seriesFormat === MangaFormat.PDF)) {
-        // Redirect to the book reader
+      if (opensInOtherReader('manga', results.chapterInfo.seriesFormat)) {
+        // Redirect to the book reader (reading lists and folder series mix formats)
         const params = this.readerService.getQueryParamsObject(this.incognitoMode(), this.readingListMode, this.readingListId);
         this.router.navigate(this.readerService.getNavigationArray(results.chapterInfo.libraryId, results.chapterInfo.seriesId, this.chapterId(), results.chapterInfo.seriesFormat), {queryParams: params});
         return;

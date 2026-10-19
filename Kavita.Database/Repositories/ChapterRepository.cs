@@ -68,6 +68,8 @@ public class ChapterRepository(DataContext context, IMapper mapper) : IChapterRe
                 chapter.TitleName,
                 volume.SeriesId,
                 chapter.Pages,
+                // A folder-organized series may mix formats, so the reader follows the chapter's own file
+                FileFormat = chapter.Files.Select(f => (MangaFormat?) f.Format).FirstOrDefault(),
             })
             .Join(context.Series, data => data.SeriesId, series => series.Id, (data, series) => new
             {
@@ -78,7 +80,7 @@ public class ChapterRepository(DataContext context, IMapper mapper) : IChapterRe
                 data.SeriesId,
                 data.Pages,
                 data.TitleName,
-                SeriesFormat = series.Format,
+                SeriesFormat = data.FileFormat ?? series.Format,
                 SeriesName = series.Name,
                 series.LibraryId,
                 LibraryType = series.Library.Type

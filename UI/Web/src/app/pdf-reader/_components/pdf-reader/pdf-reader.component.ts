@@ -46,6 +46,7 @@ import {CHAPTER_ID_DOESNT_EXIST, ReaderService} from "../../../_services/reader.
 import {UtilityService} from "../../../shared/_services/utility.service";
 import {Chapter} from "../../../_models/chapter";
 import {User} from "../../../_models/user/user";
+import {opensInOtherReader} from "../../../_helpers/reader-format";
 
 const KEYBIND_TARGETS = [
   {keyBindTarget: KeyBindTarget.OpenHelp},
@@ -319,6 +320,12 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     this.calcScrollbarNeeded();
 
     this.bookService.getBookInfo(this.chapterId).subscribe(info => {
+      if (opensInOtherReader('pdf', info.seriesFormat)) {
+        // Reading lists and folder series mix formats
+        const params = this.readerService.getQueryParamsObject(this.incognitoMode, this.readingListMode, this.readingListId);
+        this.router.navigate(this.readerService.getNavigationArray(info.libraryId, info.seriesId, this.chapterId, info.seriesFormat), {queryParams: params});
+        return;
+      }
       this.volumeId = info.volumeId;
       this.bookTitle = info.bookTitle;
       this.cdRef.markForCheck();

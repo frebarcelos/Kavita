@@ -70,7 +70,7 @@ import {PAGING_DIRECTION} from "../../../manga-reader/_models/reader-enums";
 import {BookPageLayoutMode} from "../../../_models/readers/book-page-layout-mode";
 import {ReadingDirection} from "../../../_models/preferences/reading-direction";
 import {WritingStyle} from "../../../_models/preferences/writing-style";
-import {MangaFormat} from "../../../_models/manga-format";
+import {opensInOtherReader} from "../../../_helpers/reader-format";
 import {PageStyle} from "../reader-settings/reader-settings.component";
 import {BookTheme} from "../../../_models/preferences/book-theme";
 import {Stack} from "../../../shared/data-structures/stack";
@@ -996,8 +996,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
 
     this.bookService.getBookInfo(this.chapterId, true).subscribe(async (info) => {
-      if (this.readingListMode && info.seriesFormat !== MangaFormat.EPUB) {
-        // Redirect to the manga reader.
+      if (opensInOtherReader('book', info.seriesFormat)) {
+        // Redirect to the manga or pdf reader (reading lists and folder series mix formats)
         const params = this.readerService.getQueryParamsObject(this.incognitoMode(), this.readingListMode, this.readingListId);
         await this.router.navigate(this.readerService.getNavigationArray(info.libraryId, info.seriesId, this.chapterId, info.seriesFormat), {queryParams: params});
         return;
