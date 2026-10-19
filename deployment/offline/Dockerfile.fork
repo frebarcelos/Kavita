@@ -1,0 +1,11 @@
+# Contexto: diretório publicado do backend, já com o build da UI em wwwroot.
+# Não usar a raiz do checkout como contexto: ela pode conter dados operacionais.
+FROM jvmilazz0/kavita:0.9.1@sha256:31181a32f0dda73cae68721867028a7253d57881b58bea5754cd9e578e75421a
+
+# Esta remoção ocorre apenas na camada da imagem, antes de montar qualquer volume.
+# Evita servir assets comprimidos antigos junto da interface nova.
+RUN rm -rf /kavita/wwwroot
+COPY . /kavita/
+RUN chmod +x /kavita/Kavita.Server
+ENTRYPOINT ["/kavita/Kavita.Server"]
+CMD []

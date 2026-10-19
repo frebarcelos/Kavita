@@ -549,3 +549,6 @@ Kavita.Server/config/appsettings.*.json
 
 # Old installs might have this as a default location
 API/config/bookmarks/
+
+# Configuração local do servidor offline (sem versionar caminhos/credenciais)
+/deployment/offline/.env
