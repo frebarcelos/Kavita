@@ -71,6 +71,10 @@ export class ImageService {
     return `${this.baseUrl}image/volume-cover?volumeId=${volumeId}&apiKey=${this.encodedKey()}`;
   }
 
+  getFolderCoverImage(libraryId: number, path: string, version: string) {
+    return `${this.baseUrl}image/folder-cover?libraryId=${libraryId}&path=${encodeURIComponent(path)}&v=${encodeURIComponent(version)}&apiKey=${this.encodedKey()}`;
+  }
+
   getSeriesCoverImage(seriesId: number) {
     return `${this.baseUrl}image/series-cover?seriesId=${seriesId}&apiKey=${this.encodedKey()}`;
   }

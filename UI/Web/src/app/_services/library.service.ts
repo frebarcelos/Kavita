@@ -9,6 +9,7 @@ import {DirectoryDto} from '../_models/system/directory-dto';
 import {EVENTS, MessageHubService} from "./message-hub.service";
 import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 import {MetadataProvider} from "../_models/kavitaplus/metadata-provider.enum";
+import {FolderCover, FolderSeries} from "../_models/library/folder-series";
 
 
 @Injectable({
@@ -92,6 +93,20 @@ export class LibraryService {
 
   hasFilesAtRoot(roots: Array<string>) {
     return this.httpClient.post<Array<string>>(this.baseUrl + 'library/has-files-at-root', {roots});
+  }
+
+  /**
+   * The library's series the user may see, each with its folder relative to the library root
+   */
+  getFolderSeries(libraryId: number) {
+    return this.httpClient.get<FolderSeries[]>(this.baseUrl + 'library/folder-series?libraryId=' + libraryId);
+  }
+
+  /**
+   * The folders of the library that have a cover chosen by the user
+   */
+  getFolderCovers(libraryId: number) {
+    return this.httpClient.get<FolderCover[]>(this.baseUrl + 'library/folder-covers?libraryId=' + libraryId);
   }
 
   getJumpBar(libraryId: number) {

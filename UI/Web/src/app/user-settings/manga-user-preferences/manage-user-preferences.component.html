@@ -61,6 +61,18 @@
         </div>
 
         <div class="row g-0 mt-4 mb-4">
+          <app-setting-switch [title]="t('browse-libraries-by-folder-label')" [subtitle]="t('browse-libraries-by-folder-tooltip')">
+            <ng-template>
+              <div class="form-check form-switch float-end">
+                <input type="checkbox" role="switch"
+                       [formField]="formGroup.browseLibrariesByFolder" class="form-check-input"
+                       aria-labelledby="auto-close-label">
+              </div>
+            </ng-template>
+          </app-setting-switch>
+        </div>
+
+        <div class="row g-0 mt-4 mb-4">
           <app-setting-switch [title]="t('collapse-series-relationships-label')" [subtitle]="t('collapse-series-relationships-tooltip')">
             <ng-template>
               <div class="form-check form-switch float-end">

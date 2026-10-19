@@ -249,6 +249,8 @@
         "disable-animations-tooltip": "Turns off animations in the site. Useful for e-ink readers.",
         "collapse-series-relationships-label": "Collapse Series Relationships",
         "collapse-series-relationships-tooltip": "Should Kavita show Series that have no relationships or is the parent/prequel",
+        "browse-libraries-by-folder-label": "Open libraries by folder",
+        "browse-libraries-by-folder-tooltip": "Opening a library shows its folders, like a file explorer. Turn off to open the series grid.",
         "highlight-bar-label": "Annotations highlight colors",
         "highlight-bar-tooltip": "These colors are shared between all books",
         "colorscape-label": "Use ColorScape",
@@ -5052,6 +5054,17 @@
         "issue-num-shorthand": "#{{num}}",
         "volume-num-shorthand": "Vol {{num}}",
         "libraries": "Libraries"
+    },
+
+    "library-folders": {
+        "browse": "Folders",
+        "title": "{{name}} folders",
+        "folder-items": "This folder's items",
+        "all-series": "All series",
+        "edit-cover": "Edit cover",
+        "remove-cover": "Remove cover",
+        "series": "series",
+        "empty": "This folder has no series you can see."
     }
 
 }

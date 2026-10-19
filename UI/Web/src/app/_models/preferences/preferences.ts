@@ -13,6 +13,8 @@ export interface Preferences {
   promptForDownloadSize: boolean;
   noTransitions: boolean;
   collapseSeriesRelationships: boolean;
+  /** Opening a library shows its folder tree (fork default) */
+  browseLibrariesByFolder: boolean;
   locale: string;
   bookReaderHighlightSlots: HighlightSlot[];
   colorScapeEnabled: boolean;

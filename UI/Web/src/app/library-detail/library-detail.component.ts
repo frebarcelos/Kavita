@@ -10,7 +10,7 @@ import {
   OnInit,
   signal
 } from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {BulkSelectionService} from '../cards/bulk-selection.service';
 import {UtilityService} from '../shared/_services/utility.service';
 import {SeriesAddedEvent} from '../_models/events/series-added-event';
@@ -55,7 +55,7 @@ import {NotificationProgressEvent} from "../_models/events/notification-progress
     styleUrls: ['./library-detail.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [SideNavCompanionBarComponent, CardActionablesComponent,
-        CardDetailLayoutComponent, SeriesCardComponent, BulkOperationsComponent, DecimalPipe, TranslocoDirective, LoadingComponent]
+        CardDetailLayoutComponent, SeriesCardComponent, BulkOperationsComponent, DecimalPipe, TranslocoDirective, LoadingComponent, RouterLink]
 })
 export class LibraryDetailComponent implements OnInit {
 

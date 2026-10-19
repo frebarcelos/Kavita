@@ -89,6 +89,8 @@
         "disable-animations-tooltip": "Desativa as animações do site. Útil para leitores de tinta eletrônica.",
         "collapse-series-relationships-label": "Recolher Relacionamentos de Séries",
         "collapse-series-relationships-tooltip": "Define se o Kavita deve exibir apenas as séries que não possuem relacionamentos ou que são a série pai/prequel",
+        "browse-libraries-by-folder-label": "Abrir bibliotecas por pastas",
+        "browse-libraries-by-folder-tooltip": "Ao abrir uma biblioteca, mostra as pastas como no explorador de arquivos. Desligue para abrir a grade de séries.",
         "share-series-reviews-label": "Compartilhar Análises de Séries",
         "share-series-reviews-tooltip": "Permitir que suas análises sejam visíveis para outros usuários neste servidor",
         "clients-opds-alert": "O OPDS não está ativado neste servidor. Isso não afetará os usuários do Mihon.",
@@ -4461,5 +4463,15 @@
         "save": "{{common.save}}",
         "close": "{{common.close}}",
         "review-label": "{{review-modal.review-label}}"
+    },
+    "library-folders": {
+        "browse": "Pastas",
+        "title": "Pastas de {{name}}",
+        "folder-items": "Itens desta pasta",
+        "all-series": "Todas as séries",
+        "edit-cover": "Editar capa",
+        "remove-cover": "Remover capa",
+        "series": "séries",
+        "empty": "Esta pasta não tem séries visíveis para você."
     }
 }

@@ -49,6 +49,13 @@ export class UploadService {
    * @param lockCover Should the cover be locked or not
    * @returns
    */
+  /**
+   * Sets a folder's cover from a base64 image, or goes back to its first series' cover when null
+   */
+  updateFolderCoverImage(libraryId: number, path: string, base64: string | null) {
+    return this.httpClient.post(this.baseUrl + 'upload/folder-cover', {libraryId, path, url: base64}, TextResonse);
+  }
+
   updateSeriesCoverImage(seriesId: number, fileName: string, lockCover: boolean = true) {
     return this.httpClient.post<number>(this.baseUrl + 'upload/series', {id: seriesId, fileName, lockCover}).pipe(tap(_ => {
       this.toastr.info(translate('series-detail.cover-change'));

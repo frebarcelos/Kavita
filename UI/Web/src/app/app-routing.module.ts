@@ -96,6 +96,11 @@ export const routes: Routes = [
             loadChildren: () => import('./_routes/library-detail-routing.module').then(m => m.routes)
           },
           {
+            path: 'folders',
+            pathMatch: 'full',
+            loadComponent: () => import('./library-folders/library-folders.component').then(c => c.LibraryFoldersComponent)
+          },
+          {
             path: 'series/:seriesId',
             pathMatch: 'full',
             data: {titleField: 'series', titleProp: 'name', titleSuffix: ' Details'},
