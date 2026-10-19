@@ -25,3 +25,6 @@ jobs:
 
           echo 'Building UI'
           npm run prod
+      - name: Test UI behavior
+        working-directory: UI/Web
+        run: npm test

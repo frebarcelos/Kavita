@@ -134,6 +134,15 @@
               "src/**/*.html"
             ]
           }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "runner": "vitest",
+            "watch": false,
+            "buildTarget": "kavita-webui:build"
+          }
         }
       }
     }
