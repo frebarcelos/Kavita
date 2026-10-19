@@ -1,6 +1,7 @@
 ﻿using System.IO.Abstractions.TestingHelpers;
 using Kavita.Database.Tests;
 using Kavita.Models.Entities.Enums;
+using Kavita.Models.Metadata;
 using Kavita.Services.Scanner;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -25,6 +26,41 @@ public class PdfParserTests : AbstractFsTest
     }
 
     #region Parse
+
+    [Fact]
+    public void LegacyMetadataMode_UnnumberedBooksKeepTheirFolderGrouping()
+    {
+        var category = RootDirectory + "Technology/";
+        var first = _parser.Parse(category + "First Independent Book.pdf", category,
+            RootDirectory, LibraryType.Book, true, new ComicInfo()).Info;
+        var second = _parser.Parse(category + "Second Independent Book.pdf", category,
+            RootDirectory, LibraryType.Book, true, new ComicInfo()).Info;
+
+        Assert.NotNull(first);
+        Assert.NotNull(second);
+        Assert.Equal("Technology", first.Series);
+        Assert.Equal(first.Series, second.Series);
+        Assert.True(first.IsSpecial);
+        Assert.True(second.IsSpecial);
+    }
+
+    [Theory]
+    [InlineData(LibraryType.Manga)]
+    [InlineData(LibraryType.Comic)]
+    [InlineData(LibraryType.Book)]
+    public void Parse_ExplicitPdfSeriesAndVolume_TakePrecedenceOverFilename(LibraryType libraryType)
+    {
+        var actual = _parser.Parse(RootDirectory + "Unrelated v001.pdf", RootDirectory,
+            RootDirectory, libraryType, true, new ComicInfo
+            {
+                Series = "Explicit Series", Title = "Volume Title", Volume = "12"
+            }).Info;
+
+        Assert.NotNull(actual);
+        Assert.Equal("Explicit Series", actual.Series);
+        Assert.Equal("12", actual.Volumes);
+        Assert.Equal("Volume Title", actual.Title);
+    }
 
     /// <summary>
     /// Tests that if there is a Series Folder then Chapter folder, the code appropriately identifies the Series name and Chapter

@@ -167,6 +167,46 @@ public class BookServiceTests
         Assert.Equal("Georges Bizet \\(1838-1875\\)", comicInfo.Writer);
     }
 
+    [Theory]
+    [InlineData(LibraryType.Manga)]
+    [InlineData(LibraryType.Comic)]
+    public void LegacyMetadataMode_PdfTitleRemainsTheFallbackSeries(LibraryType libraryType)
+    {
+        var testDirectory = Path.GetFullPath(Path.Join(Directory.GetCurrentDirectory(), "../../../Test Data/BookService"));
+        var comicInfo = _bookService.GetComicInfo(Path.Join(testDirectory, "test.pdf"), out _);
+        Assert.NotNull(comicInfo);
+        var directoryService = new DirectoryService(Substitute.For<ILogger<DirectoryService>>(), new FileSystem());
+        var parser = new PdfParser(directoryService);
+
+        var first = parser.Parse(Path.Join(testDirectory, "Example Manga v001.pdf"), testDirectory,
+            testDirectory, libraryType, true, comicInfo).Info;
+        var second = parser.Parse(Path.Join(testDirectory, "Example Manga v002.pdf"), testDirectory,
+            testDirectory, libraryType, true, comicInfo).Info;
+
+        Assert.NotNull(first);
+        Assert.NotNull(second);
+        Assert.Equal(comicInfo.Title, first.Series);
+        Assert.Equal(first.Series, second.Series);
+        Assert.Equal("1", first.Volumes);
+        Assert.Equal("2", second.Volumes);
+        Assert.Equal(comicInfo.Title, first.Title);
+        Assert.Equal("Georges Bizet \\(1838-1875\\)", comicInfo.Writer);
+    }
+
+    [Fact]
+    public void PdfBookWithoutExplicitSeries_UsesMetadataTitle()
+    {
+        var testDirectory = Path.GetFullPath(Path.Join(Directory.GetCurrentDirectory(), "../../../Test Data/BookService"));
+        var comicInfo = _bookService.GetComicInfo(Path.Join(testDirectory, "test.pdf"), out _);
+        Assert.NotNull(comicInfo);
+        var directoryService = new DirectoryService(Substitute.For<ILogger<DirectoryService>>(), new FileSystem());
+        var actual = new PdfParser(directoryService).Parse(Path.Join(testDirectory, "Unrelated filename.pdf"),
+            testDirectory, testDirectory, LibraryType.Book, true, comicInfo).Info;
+
+        Assert.NotNull(actual);
+        Assert.Equal("Variations Chromatiques de concert", actual.Series);
+    }
+
     [Fact]
     public void GetCoverImage_Pdf_ProducesValidImage()
     {
