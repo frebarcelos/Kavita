@@ -542,6 +542,32 @@ namespace Kavita.Database.Migrations
                     b.ToTable("EpubFont");
                 });
 
+            modelBuilder.Entity("Kavita.Models.Entities.FolderCover", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CoverImage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastModifiedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Path")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "Path")
+                        .IsUnique();
+
+                    b.ToTable("FolderCover");
+                });
+
             modelBuilder.Entity("Kavita.Models.Entities.FolderPath", b =>
                 {
                     b.Property<int>("Id")
@@ -4051,6 +4077,17 @@ namespace Kavita.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("AppUser");
+                });
+
+            modelBuilder.Entity("Kavita.Models.Entities.FolderCover", b =>
+                {
+                    b.HasOne("Kavita.Models.Entities.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Kavita.Models.Entities.FolderPath", b =>

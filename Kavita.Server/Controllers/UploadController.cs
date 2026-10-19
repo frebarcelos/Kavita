@@ -16,7 +16,9 @@ using Kavita.Common;
 using Kavita.Common.Extensions;
 using Kavita.Models.Constants;
 using Kavita.Models.DTOs.SignalR;
+using Kavita.Models.DTOs;
 using Kavita.Models.DTOs.Uploads;
+using Kavita.Models.Entities;
 using Kavita.Models.Entities.Enums;
 using Kavita.Models.Entities.MetadataMatching;
 using Kavita.Server.Attributes;
@@ -396,6 +398,57 @@ public class UploadController : BaseApiController
     /// Returns true when the request carries a new cover source (a staged temp file or a base64 payload).
     /// When false, the caller is resetting/clearing the cover.
     /// </summary>
+    /// <summary>
+    /// Sets the cover of a folder of the library's folder tree, or goes back to its first series' cover when the dto
+    /// carries no image
+    /// </summary>
+    [Authorize(Policy = PolicyGroups.AdminPolicy)]
+    [HttpPost("folder-cover")]
+    public async Task<ActionResult> UploadFolderCover(UploadFolderCoverDto dto)
+    {
+        var ct = HttpContext.RequestAborted;
+        var path = dto.Path.Trim('/');
+
+        // Only folders of the catalog's tree; the path never reaches the file system
+        var folders = await _unitOfWork.SeriesRepository.GetFolderSeriesAsync(dto.LibraryId, UserId, ct);
+        if (!folders.Any(f => path.Length == 0 || f.Path == path || f.Path.StartsWith(path + "/", StringComparison.Ordinal)))
+        {
+            return BadRequest(await _localizationService.TranslateAsync(UserId, "generic-cover-folder-save"));
+        }
+
+        var existing = await _unitOfWork.LibraryRepository.GetFolderCoverAsync(dto.LibraryId, path, ct);
+        var source = new UploadCoverFileDto { Id = dto.LibraryId, Url = dto.Url, FileName = dto.FileName };
+        if (!HasCoverSource(source))
+        {
+            if (existing == null) return Ok();
+            _unitOfWork.LibraryRepository.Remove(existing);
+            await _unitOfWork.CommitAsync(ct);
+            return Ok();
+        }
+
+        var fileName = await CreateThumbnail(source, ImageService.GetFolderCoverFormat(dto.LibraryId, path));
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return BadRequest(await _localizationService.TranslateAsync(UserId, "generic-cover-folder-save"));
+        }
+
+        if (existing == null)
+        {
+            _unitOfWork.LibraryRepository.Add(new FolderCover
+            {
+                LibraryId = dto.LibraryId, Path = path, CoverImage = fileName, LastModifiedUtc = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            existing.CoverImage = fileName;
+            existing.LastModifiedUtc = DateTime.UtcNow;
+        }
+
+        await _unitOfWork.CommitAsync(ct);
+        return Ok();
+    }
+
     private static bool HasCoverSource(UploadCoverFileDto dto) =>
         !string.IsNullOrEmpty(dto.FileName) || !string.IsNullOrEmpty(dto.Url);
 

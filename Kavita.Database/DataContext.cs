@@ -63,6 +63,7 @@ public sealed class DataContext : IdentityDbContext<AppUser, AppRole, int,
     public DbSet<SiteTheme> SiteTheme { get; set; } = null!;
     public DbSet<SeriesRelation> SeriesRelation { get; set; } = null!;
     public DbSet<FolderPath> FolderPath { get; set; } = null!;
+    public DbSet<FolderCover> FolderCover { get; set; } = null!;
     public DbSet<Device> Device { get; set; } = null!;
     public DbSet<ServerStatistics> ServerStatistics { get; set; } = null!;
     public DbSet<MediaError> MediaError { get; set; } = null!;
@@ -137,6 +138,12 @@ public sealed class DataContext : IdentityDbContext<AppUser, AppRole, int,
         builder.Entity<AppUserCollection>()
             .Property(b => b.AgeRating)
             .HasDefaultValue(AgeRating.Unknown);
+
+        builder.Entity<FolderCover>(entity =>
+        {
+            entity.HasOne(c => c.Library).WithMany().HasForeignKey(c => c.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(c => new { c.LibraryId, c.Path }).IsUnique();
+        });
 
         builder.Entity<MediaError>()
             .HasOne(e => e.Library)

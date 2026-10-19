@@ -525,6 +525,16 @@ public class ImageService(ILogger<ImageService> logger, IDirectoryService direct
     }
 
     /// <summary>
+    /// Returns the name format for a folder cover image chosen by the user
+    /// </summary>
+    /// <remarks>Must not match any cleanup regex above (e.g. "v1_c2"), as no cleanup knows folder covers</remarks>
+    public static string GetFolderCoverFormat(int libraryId, string path)
+    {
+        var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path)));
+        return $"fldr{libraryId}-{hash[..16]}";
+    }
+
+    /// <summary>
     /// Returns the name format for a collection tag cover image
     /// </summary>
     /// <param name="tagId"></param>

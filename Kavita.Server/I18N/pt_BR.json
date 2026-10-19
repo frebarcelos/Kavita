@@ -116,6 +116,7 @@
     "total-backups": "O total de backups deve estar entre 1 e 30",
     "url-required": "Você deve passar uma url para usar",
     "generic-cover-series-save": "Não é possível salvar a imagem da capa na Séries",
+    "generic-cover-folder-save": "Não foi possível salvar a capa da pasta",
     "generic-cover-library-save": "Não foi possível salvar a imagem da capa na Biblioteca",
     "generic-user-pref": "Ocorreu um problema ao salvar as preferências",
     "opds-disabled": "OPDS não está ativado neste servidor",

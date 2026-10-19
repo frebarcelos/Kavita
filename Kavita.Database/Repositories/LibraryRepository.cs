@@ -42,6 +42,29 @@ public class LibraryRepository(DataContext context, IMapper mapper) : ILibraryRe
         context.Library.Remove(library);
     }
 
+    public Task<FolderCover?> GetFolderCoverAsync(int libraryId, string path, CancellationToken ct = default)
+    {
+        return context.FolderCover.SingleOrDefaultAsync(c => c.LibraryId == libraryId && c.Path == path, ct);
+    }
+
+    public async Task<IList<FolderCoverDto>> GetFolderCoversAsync(int libraryId, CancellationToken ct = default)
+    {
+        return await context.FolderCover
+            .Where(c => c.LibraryId == libraryId)
+            .Select(c => new FolderCoverDto(c.Path, c.LastModifiedUtc))
+            .ToListAsync(ct);
+    }
+
+    public void Add(FolderCover cover)
+    {
+        context.FolderCover.Add(cover);
+    }
+
+    public void Remove(FolderCover cover)
+    {
+        context.FolderCover.Remove(cover);
+    }
+
     public async Task<IList<LibraryDto>> GetLibraryDtosForUsernameAsync(string userName, CancellationToken ct = default)
     {
         return await context.Library

@@ -27,6 +27,12 @@ public interface ILibraryRepository
     void Add(Library library);
     void Update(Library library);
     void Delete(Library? library);
+    /// <summary>The cover the user chose for a folder of the library's folder tree, if any</summary>
+    Task<FolderCover?> GetFolderCoverAsync(int libraryId, string path, CancellationToken ct = default);
+    /// <summary>The folders of the library that have a cover chosen by the user</summary>
+    Task<IList<FolderCoverDto>> GetFolderCoversAsync(int libraryId, CancellationToken ct = default);
+    void Add(FolderCover cover);
+    void Remove(FolderCover cover);
     Task<IEnumerable<LibraryDto>> GetLibraryDtosAsync(CancellationToken ct = default);
     Task<LibraryDto?> GetLibraryDtoByIdAsync(int libraryId, CancellationToken ct = default);
     Task<LiteLibraryDto?> GetLiteLibraryDtoByIdAsync(int libraryId, CancellationToken ct = default);

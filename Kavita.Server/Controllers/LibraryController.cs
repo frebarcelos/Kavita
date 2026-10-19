@@ -300,6 +300,17 @@ public class LibraryController(
     }
 
     /// <summary>
+    /// The folders of the library that have a cover chosen by the user
+    /// </summary>
+    [LibraryAccess]
+    [HttpGet("folder-covers")]
+    public async Task<ActionResult<IList<FolderCoverDto>>> GetFolderCovers(int libraryId)
+    {
+        var ct = HttpContext.RequestAborted;
+        return Ok(await unitOfWork.LibraryRepository.GetFolderCoversAsync(libraryId, ct));
+    }
+
+    /// <summary>
     /// Grants a user account access to a Library
     /// </summary>
     /// <param name="updateLibraryForUserDto"></param>

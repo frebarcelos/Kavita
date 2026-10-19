@@ -60,6 +60,21 @@ public class ImageController(IUnitOfWork unitOfWork, IDirectoryService directory
     }
 
     /// <summary>
+    /// Returns the cover chosen by the user for a folder of the library's folder tree
+    /// </summary>
+    /// <param name="libraryId"></param>
+    /// <param name="path">Folder relative to the library root; looked up in the catalog, never on disk</param>
+    [LibraryAccess]
+    [HttpGet("folder-cover")]
+    public async Task<ActionResult> GetFolderCoverImage(int libraryId, string? path)
+    {
+        var ct = HttpContext.RequestAborted;
+        var cover = await unitOfWork.LibraryRepository.GetFolderCoverAsync(libraryId, path ?? string.Empty, ct);
+        if (cover == null) return NotFound();
+        return PhysicalFile(Path.Join(directoryService.CoverImageDirectory, cover.CoverImage));
+    }
+
+    /// <summary>
     /// Returns cover image for Volume
     /// </summary>
     /// <param name="volumeId"></param>

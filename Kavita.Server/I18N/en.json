@@ -138,6 +138,7 @@
     "url-unable-to-resolve": "Unable to resolve hostname",
     "url-blocked-address": "URL resolves to a blocked address",
     "generic-cover-series-save": "Unable to save cover image to Series",
+    "generic-cover-folder-save": "Unable to save cover image to Folder",
     "generic-cover-collection-save": "Unable to save cover image to Collection",
     "generic-cover-reading-list-save": "Unable to save cover image to Reading List",
     "generic-cover-chapter-save": "Unable to save cover image to Chapter",
