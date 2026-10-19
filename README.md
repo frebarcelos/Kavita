@@ -1,4 +1,7 @@
 ﻿# [<img src="/Logo/kavita.svg" width="32" alt="">]() Kavita
+
+> **Documentação deste fork:** [contexto para IA](docs/ai/README.md), [regras de desenvolvimento e TDD](AGENTS.md), [plano Kavita + Kover offline](docs/plans/KAVITA_KOVER_OFFLINE.md) e [organização por pastas aplicada ao principal](docs/validation/PASTAS_PRINCIPAL.md).
+
 <div align="center">
 
 ![new_github_preview_stills](https://github.com/user-attachments/assets/f016b34f-3c4c-4f07-8e72-12cd6f4e71ea)
