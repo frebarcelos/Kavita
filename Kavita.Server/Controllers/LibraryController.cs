@@ -84,6 +84,9 @@ public class LibraryController(
             .WithMetadataProvider(dto.MetadataProvider)
             .Build();
 
+        library.FolderBasedOrganization = dto.FolderBasedOrganization ?? false;
+        ApplyFolderOrganizationPolicy(library);
+
         library.LibraryFileTypes = dto.FileGroupTypes
             .Select(t => new LibraryFileTypeGroup() {FileTypeGroup = t, LibraryId = library.Id})
             .Distinct()
@@ -651,6 +654,11 @@ public class LibraryController(
         var library = await unitOfWork.LibraryRepository.GetLibraryForIdAsync(dto.Id, LibraryIncludes.Folders | LibraryIncludes.FileTypes | LibraryIncludes.ExcludePatterns, ct);
         if (library == null) return BadRequest(await localizationService.TranslateAsync(userId, "library-doesnt-exist"));
 
+        var organizationUpdate = dto.FolderBasedOrganization.HasValue &&
+                                 dto.FolderBasedOrganization.Value != library.FolderBasedOrganization;
+        if (organizationUpdate && await unitOfWork.LibraryRepository.HasSeriesAsync(library.Id, ct))
+            return Conflict("library-organization-migration-required");
+
         var newName = dto.Name.Trim();
         if (await unitOfWork.LibraryRepository.LibraryExists(newName, ct) && !library.Name.Equals(newName))
             return BadRequest(await localizationService.TranslateAsync(userId, "library-name-exists"));
@@ -671,7 +679,7 @@ public class LibraryController(
             BackgroundJob.Enqueue(() => libraryWatcher.RestartWatching());
         }
 
-        if (originalFoldersCount != dto.Folders.Count() || typeUpdate)
+        if (originalFoldersCount != dto.Folders.Count() || typeUpdate || organizationUpdate)
         {
             await taskScheduler.EnqueueScanLibrary(library.Id);
         }
@@ -724,6 +732,16 @@ public class LibraryController(
         return Ok(KavitaPlusConfiguration.ScrobbleProvidersForLibraryTypes.Keys.ToList());
     }
 
+    private static void ApplyFolderOrganizationPolicy(Library library)
+    {
+        if (!library.FolderBasedOrganization) return;
+        library.EnableMetadata = false;
+        library.AllowMetadataMatching = false;
+        library.AllowScrobbling = false;
+        library.ManageCollections = false;
+        library.ManageReadingLists = false;
+    }
+
     private void UpdateLibrarySettings(UpdateLibraryDto dto, Library library, bool updateType = true)
     {
         // Reminder: Add new fields to the Create Library Endpoint!
@@ -743,6 +761,9 @@ public class LibraryController(
         library.AllowScrobbling = dto.AllowScrobbling;
         library.AllowMetadataMatching = dto.AllowMetadataMatching;
         library.EnableMetadata = dto.EnableMetadata;
+        if (dto.FolderBasedOrganization.HasValue)
+            library.FolderBasedOrganization = dto.FolderBasedOrganization.Value;
+        ApplyFolderOrganizationPolicy(library);
         library.RemovePrefixForSortName = dto.RemovePrefixForSortName;
         library.InheritWebLinksFromFirstChapter = dto.InheritWebLinksFromFirstChapter;
         library.DefaultLanguage = dto.DefaultLanguage;

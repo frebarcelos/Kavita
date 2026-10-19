@@ -24,6 +24,8 @@ namespace Kavita.Database.Repositories;
 
 public class LibraryRepository(DataContext context, IMapper mapper) : ILibraryRepository
 {
+    public Task<bool> HasSeriesAsync(int libraryId, CancellationToken ct = default) =>
+        context.Series.AnyAsync(s => s.LibraryId == libraryId, ct);
     public void Add(Library library)
     {
         context.Library.Add(library);

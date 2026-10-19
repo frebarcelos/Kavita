@@ -669,6 +669,8 @@
         "browse-people": "Navegar por Pessoas"
     },
     "library-settings-modal": {
+        "folder-organization-label": "Organizar por pastas",
+        "folder-organization-description": "Pastas definem os grupos e os nomes dos arquivos identificam as leituras. Metadados internos são ignorados. Escolha ao criar a biblioteca; um catálogo existente precisa de migração.",
         "close": "{{common.close}}",
         "edit-title": "Editar {{name}}",
         "add-title": "Adicionar Biblioteca",

@@ -328,8 +328,9 @@ public class ScannerService(
         // Don't allow any processing on files that aren't part of this series
         var toProcess = parsedSeries.Keys.Where(key =>
             key.ExistingSeriesId == series.Id ||
-            key.NormalizedName.Equals(series.NormalizedName) ||
-            key.NormalizedName.Equals(series.NormalizedOriginalName))
+            (!string.IsNullOrEmpty(key.FolderKey)
+                ? series.MatchesParsedSeries(key)
+                : key.NormalizedName.Equals(series.NormalizedName) || key.NormalizedName.Equals(series.NormalizedOriginalName)))
             .ToList();
 
         var toProcessList = toProcess.Select(k => parsedSeries[k]).ToList();
@@ -385,7 +386,7 @@ public class ScannerService(
         var parsedSeries = new Dictionary<ParsedSeries, IList<ParserInfo>>();
 
         var existingByName = existingSeries
-            .SelectMany(s => new[] { s.NormalizedName, s.NormalizedLocalizedName, s.NormalizedOriginalName }
+            .SelectMany(s => new[] { s.NormalizedName, s.NormalizedLocalizedName, s.NormalizedOriginalName, s.FolderKey }
                 .Where(name => !string.IsNullOrEmpty(name))
                 .Distinct()
                 .Select(name => (Name: name, Series: s)))
@@ -398,7 +399,9 @@ public class ScannerService(
             .Select(s => (Result: s, SeriesId: FindExistingSeriesId(s, existingByName)))
             .GroupBy(s => s.SeriesId != null
                 ? (s.SeriesId, string.Empty, MangaFormat.Unknown)
-                : ((int?) null, s.Result.ParsedSeries.NormalizedName, s.Result.ParsedSeries.Format),
+                : string.IsNullOrEmpty(s.Result.ParsedSeries.FolderKey)
+                    ? ((int?) null, s.Result.ParsedSeries.NormalizedName, s.Result.ParsedSeries.Format)
+                    : ((int?) null, s.Result.ParsedSeries.FolderKey, MangaFormat.Unknown),
                 s => s.Result);
 
         foreach (var series in seriesAcrossFolders)
@@ -423,6 +426,13 @@ public class ScannerService(
 
     private static int? FindExistingSeriesId(ScannedSeriesResult result, ILookup<string, SeriesNameMatch> existingByName)
     {
+        if (!string.IsNullOrEmpty(result.ParsedSeries.FolderKey))
+        {
+            var folderMatches = existingByName[result.ParsedSeries.FolderKey]
+                .Where(s => s.FolderKey == result.ParsedSeries.FolderKey)
+                .Select(s => s.Id).Distinct().ToList();
+            return folderMatches.Count == 1 ? folderMatches[0] : null;
+        }
         var names = result.ParsedInfos
             .Select(info => info.LocalizedSeries?.ToNormalized())
             .Prepend(result.ParsedSeries.NormalizedName)

@@ -34,6 +34,37 @@ public class VolumeRepository(DataContext context, IMapper mapper) : IVolumeRepo
         context.Volume.RemoveRange(volumes);
     }
 
+    public async Task AttachChapterReferencesToVolumesAsync(IReadOnlyCollection<Chapter> movedChapters,
+        CancellationToken ct = default)
+    {
+        if (movedChapters.Count == 0) return;
+        var volumes = movedChapters.ToDictionary(c => c.Id, c => c.Volume);
+        var ids = volumes.Keys.ToList();
+
+        foreach (var bookmark in await context.AppUserBookmark.Where(b => ids.Contains(b.ChapterId)).ToListAsync(ct))
+            bookmark.Volume = volumes[bookmark.ChapterId];
+        foreach (var item in await context.ReadingListItem.Where(i => ids.Contains(i.ChapterId)).ToListAsync(ct))
+            item.Volume = volumes[item.ChapterId];
+        foreach (var activity in await context.AppUserReadingSessionActivityData.Where(a => ids.Contains(a.ChapterId)).ToListAsync(ct))
+            activity.Volume = volumes[activity.ChapterId];
+    }
+
+    public async Task SyncChapterReferenceVolumeIdsAsync(IReadOnlyCollection<int> chapterIds, CancellationToken ct = default)
+    {
+        if (chapterIds.Count == 0) return;
+        var ids = chapterIds.ToList();
+
+        await context.AppUserProgresses.Where(p => ids.Contains(p.ChapterId))
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.VolumeId,
+                p => context.Chapter.Where(c => c.Id == p.ChapterId).Select(c => c.VolumeId).First()), ct);
+        await context.AppUserTableOfContent.Where(t => ids.Contains(t.ChapterId))
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.VolumeId,
+                t => context.Chapter.Where(c => c.Id == t.ChapterId).Select(c => c.VolumeId).First()), ct);
+        await context.AppUserAnnotation.Where(a => ids.Contains(a.ChapterId))
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.VolumeId,
+                a => context.Chapter.Where(c => c.Id == a.ChapterId).Select(c => c.VolumeId).First()), ct);
+    }
+
     /// <summary>
     /// Returns a list of non-tracked files for a given volume.
     /// </summary>

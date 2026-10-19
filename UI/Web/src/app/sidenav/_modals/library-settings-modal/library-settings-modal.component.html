@@ -137,6 +137,12 @@
           </div>
 
           <div class="row g-0 mt-4 mb-4">
+            <app-folder-organization-setting
+              [enabled]="formModel().folderBasedOrganization" [locked]="library() !== undefined"
+              [label]="t('folder-organization-label')" [description]="t('folder-organization-description')"
+              (enabledChange)="setFolderBasedOrganization($event)" />
+          </div>
+          <div class="row g-0 mt-4 mb-4">
             <app-setting-switch [title]="t('enable-metadata-label')" [subtitle]="t('enable-metadata-tooltip')">
               <ng-template>
                 <div class="form-check form-switch float-end">

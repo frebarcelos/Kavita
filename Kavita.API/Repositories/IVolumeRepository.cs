@@ -27,6 +27,18 @@ public interface IVolumeRepository
     void Update(Volume volume);
     void Remove(Volume volume);
     void Remove(IList<Volume> volumes);
+    /// <summary>
+    /// Points the personal rows that cascade with a volume (bookmarks, reading list items, reading activity) at the
+    /// current volume of each chapter, so deleting a chapter's previous volume does not delete them
+    /// </summary>
+    /// <remarks>Call before saving; the chapters' Volume navigation must hold their new volume</remarks>
+    Task AttachChapterReferencesToVolumesAsync(IReadOnlyCollection<Chapter> movedChapters, CancellationToken ct = default);
+    /// <summary>
+    /// Copies each chapter's VolumeId to the personal rows that store it without a foreign key (progress, table of
+    /// contents, annotations)
+    /// </summary>
+    /// <remarks>Call after saving, once the chapters' new volumes have ids</remarks>
+    Task SyncChapterReferenceVolumeIdsAsync(IReadOnlyCollection<int> chapterIds, CancellationToken ct = default);
     Task<IList<MangaFile>> GetFilesForVolume(int volumeId, CancellationToken ct = default);
     Task<string?> GetVolumeCoverImageAsync(int volumeId, CancellationToken ct = default);
     Task<List<int>> GetChapterIdsByVolumeIds(int seriesId, IReadOnlyList<int> volumeIds, CancellationToken ct = default);

@@ -107,6 +107,8 @@ public interface ISeriesRepository
     Task<IList<Series>> GetSeriesThatContainsLowestFolderPathAsync(int libraryId, string path, SeriesIncludes includes = SeriesIncludes.None, CancellationToken ct = default);
     Task<IEnumerable<Series>> GetAllSeriesByNameAsync(IList<string> normalizedNames,
         int userId, SeriesIncludes includes = SeriesIncludes.None, CancellationToken ct = default);
+    /// <summary>The series of a folder-organized library's folder, whatever its format; throws if the folder has several</summary>
+    Task<Series?> GetFullSeriesByFolderAsync(int libraryId, string folder, CancellationToken ct = default);
     Task<Series?> GetFullSeriesByAnyName(string seriesName, string localizedName, int libraryId, MangaFormat format, bool withFullIncludes = true, CancellationToken ct = default);
     /// <summary>
     /// Is the given normalized name free to use for a Series in this library+format? Checks against

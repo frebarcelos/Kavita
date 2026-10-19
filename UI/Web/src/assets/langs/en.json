@@ -1989,6 +1989,8 @@
     },
 
     "library-settings-modal": {
+        "folder-organization-label": "Organize by folders",
+        "folder-organization-description": "Folders define groups and filenames identify reading items. Embedded metadata is ignored. Choose when creating a library; an existing catalog requires migration.",
         "close": "{{common.close}}",
         "edit-title": "Edit {{name}}",
         "add-title": "Add Library",

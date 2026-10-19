@@ -189,10 +189,13 @@ public class Series : IEntityDate, IHasReadTimeEstimate, IHasCoverImage, IHasMet
     }
 
     /// <summary>
-    /// Does this Series correspond to the given folder-derived parsed series key (name and format)?
+    /// Does this Series correspond to the given parsed series key (folder, or name and format)?
     /// </summary>
+    /// <remarks>A folder key ignores the format: one folder is one series whatever its files' formats</remarks>
     public bool MatchesParsedSeries(ParsedSeries key)
     {
+        if (!string.IsNullOrEmpty(key.FolderKey))
+            return FolderPath == key.FolderKey;
         return (NormalizedName.Equals(key.NormalizedName)
                 || NormalizedLocalizedName.Equals(key.NormalizedName)
                 || NormalizedOriginalName.Equals(key.NormalizedName))

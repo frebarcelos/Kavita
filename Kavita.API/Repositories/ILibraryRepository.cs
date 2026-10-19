@@ -31,6 +31,7 @@ public interface ILibraryRepository
     Task<LibraryDto?> GetLibraryDtoByIdAsync(int libraryId, CancellationToken ct = default);
     Task<LiteLibraryDto?> GetLiteLibraryDtoByIdAsync(int libraryId, CancellationToken ct = default);
     Task<bool> LibraryExists(string libraryName, CancellationToken ct = default);
+    Task<bool> HasSeriesAsync(int libraryId, CancellationToken ct = default);
     Task<Library?> GetLibraryForIdAsync(int libraryId, LibraryIncludes includes = LibraryIncludes.None, CancellationToken ct = default);
     Task<IList<LibraryDto>> GetLibraryDtosForUsernameAsync(string userName, CancellationToken ct = default);
     Task<IEnumerable<Library>> GetLibrariesAsync(LibraryIncludes includes = LibraryIncludes.None, bool track = true, CancellationToken ct = default);

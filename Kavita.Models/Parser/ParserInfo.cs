@@ -12,6 +12,8 @@ namespace Kavita.Models.Parser;
 /// </summary>
 public class ParserInfo
 {
+    /// <summary>Exact physical parent directory in folder organization mode; never a normalized title.</summary>
+    public string FolderKey { get; set; } = string.Empty;
     /// <summary>
     /// Represents the parsed chapters from a file. By default, will be 0 which means nothing could be parsed.
     /// <remarks>The chapters can only be a single float or a range of float ie) 1-2. Mainly floats should be multiples of 0.5 representing specials</remarks>

@@ -47,6 +47,8 @@ internal sealed record ProcessParserInfosArgs
     public required Dictionary<string, Person> DatabasePeople { get; init; }
     public KeptFiles Kept { get; init; } = KeptFiles.None;
     public bool ForceUpdate { get; init; }
+    /// <summary>Existing chapters that switched volumes, whose personal rows must follow them</summary>
+    public List<Chapter> MovedChapters { get; } = [];
 }
 
 internal sealed record UpdateChapterComicInfoArgs
@@ -106,8 +108,9 @@ public class ProcessSeries(
         {
             // There is an opportunity to allow duplicate series here. Like if One is in root/marvel/batman and another is root/dc/batman
             // by changing to a ToList() and if multiple, doing a firstInfo.FirstFolder/RootFolder type check
-            series =
-                await unitOfWork.SeriesRepository.GetFullSeriesByAnyName(firstInfo.Series, firstInfo.LocalizedSeries,
+            series = library.FolderBasedOrganization
+                ? await unitOfWork.SeriesRepository.GetFullSeriesByFolderAsync(library.Id, firstInfo.FolderKey)
+                : await unitOfWork.SeriesRepository.GetFullSeriesByAnyName(firstInfo.Series, firstInfo.LocalizedSeries,
                     library.Id, firstInfo.Format);
         }
         catch (Exception ex)
@@ -129,6 +132,7 @@ public class ProcessSeries(
         var lookupMs = stepWatch.ElapsedMilliseconds;
 
         ChapterChanges chapterChanges;
+        List<Chapter> movedChapters;
         try
         {
             logger.LogInformation("[ScannerService] Processing series {SeriesName} with {Count} files", series.OriginalName, parsedInfos.Count);
@@ -145,7 +149,7 @@ public class ProcessSeries(
             // Kept files were not read, so they may carry the LocalizedSeries or SeriesSort
             var hasReadAllFiles = kept.IsEmpty;
 
-            chapterChanges = await ProcessParserInfos(new ProcessParserInfosArgs
+            var parserInfosArgs = new ProcessParserInfosArgs
             {
                 Settings = settings,
                 Series = series,
@@ -153,7 +157,10 @@ public class ProcessSeries(
                 DatabasePeople = databasePeople,
                 Kept = kept,
                 ForceUpdate = args.ForceUpdate,
-            });
+            };
+            chapterChanges = await ProcessParserInfos(parserInfosArgs);
+            movedChapters = parserInfosArgs.MovedChapters;
+            await unitOfWork.VolumeRepository.AttachChapterReferencesToVolumesAsync(movedChapters);
             var chaptersMs = stepWatch.ElapsedMilliseconds;
 
             stepWatch.Restart();
@@ -163,7 +170,17 @@ public class ProcessSeries(
             series.OriginalName ??= firstParsedInfo.Series;
             series.NormalizedOriginalName = series.OriginalName.ToNormalized();
 
-            if (series.Format == MangaFormat.Unknown)
+            if (library.FolderBasedOrganization)
+            {
+                // A folder may mix formats; each chapter's files keep their own. The series shows the most common one.
+                series.Format = series.Volumes.SelectMany(v => v.Chapters).SelectMany(c => c.Files)
+                    .GroupBy(f => f.Format)
+                    .OrderByDescending(g => g.Count()).ThenBy(g => g.Key)
+                    .Select(g => g.Key)
+                    .DefaultIfEmpty(firstParsedInfo.Format)
+                    .First();
+            }
+            else if (series.Format == MangaFormat.Unknown)
             {
                 series.Format = firstParsedInfo.Format;
             }
@@ -244,6 +261,8 @@ public class ProcessSeries(
                 }
 
                 stepWatch.Restart();
+                await unitOfWork.VolumeRepository.SyncChapterReferenceVolumeIdsAsync([.. movedChapters.Select(c => c.Id)]);
+
                 // Process reading list after commit as we need to commit per list
                 if (library.ManageReadingLists)
                 {
@@ -274,7 +293,7 @@ public class ProcessSeries(
             return ProcessSeriesResult.NotSaved;
         }
 
-        if (seriesAdded && library.AllowMetadataMatching)
+        if (seriesAdded && library.AllowMetadataMatching && !library.FolderBasedOrganization)
         {
             // I think we can spawn this in a background job? Do we need to enqueue on a specific queue?
             // All changes to series after this should be page count etc
@@ -369,6 +388,17 @@ public class ProcessSeries(
 
     private async Task UpdateSeriesFolderPath(IReadOnlyCollection<string> filePaths, Library library, Series series)
     {
+        if (library.FolderBasedOrganization)
+        {
+            var first = filePaths.FirstOrDefault();
+            if (first != null)
+            {
+                var folder = Parser.NormalizePath(directoryService.FileSystem.Path.GetDirectoryName(first)!).TrimEnd('/');
+                series.FolderPath = folder;
+                series.LowestFolderPath = folder;
+            }
+            return;
+        }
         var libraryFolders = library.Folders.Select(l => Parser.NormalizePath(l.Path)).ToList();
         var seriesFiles = filePaths.Select(Parser.NormalizePath).ToList();
         if (seriesFiles.Count == 0) return;
@@ -781,6 +811,7 @@ public class ProcessSeries(
             if (chapter.VolumeId == 0 || chapter.VolumeId != volume.Id)
             {
                 logger.LogTrace("Chapter {ChapterId} is being assign or switching volumes. From {From} to {To}", chapter.Id, chapter.VolumeId, volume.Id);
+                if (chapter.Id != 0) args.MovedChapters.Add(chapter);
 
                 // Remove from old chapter if exists, then add to new one
                 chapter.Volume?.Chapters.Remove(chapter);
@@ -934,6 +965,15 @@ public class ProcessSeries(
     {
         var lookupVolume = ranges.VolumeLookupName(info.Volumes);
 
+        // Containers keep a chapter per physical file, irrespective of numeric/title collisions.
+        if (!string.IsNullOrEmpty(info.FolderKey) && info.Format != MangaFormat.Image)
+        {
+            var existing = args.Series.Volumes.SelectMany(v => v.Chapters)
+                .SingleOrDefault(c => c.Files.Any(f => Parser.NormalizePath(f.FilePath) == info.FullFilePath));
+            if (existing != null) return existing;
+            args.Series.UpdateLastChapterAdded();
+            return ChapterBuilder.FromParserInfo(info).Build();
+        }
         var volume = args.Series.Volumes.OneOrDefault(v => v.LookupName == lookupVolume);
         var exactChapterMatch = volume?.Chapters.GetChapterByRange(info);
         if (exactChapterMatch != null)

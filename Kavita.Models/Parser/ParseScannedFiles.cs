@@ -6,6 +6,7 @@ namespace Kavita.Models.Parser;
 
 public class ParsedSeries
 {
+    public string FolderKey { get; init; } = string.Empty;
     /// <summary>
     /// Name of the Series
     /// </summary>
@@ -34,7 +35,7 @@ public class ParsedSeries
 }
 
 public sealed record SeriesNameMatch(int Id, MangaFormat Format, string NormalizedName,
-    string NormalizedLocalizedName, string NormalizedOriginalName);
+    string NormalizedLocalizedName, string NormalizedOriginalName, string FolderKey = "");
 
 public class ScanResult
 {
@@ -91,6 +92,7 @@ public class ScannedSeriesResult
 
 public class SeriesModified
 {
+    public string FolderKey { get; set; } = string.Empty;
     public required string? FolderPath { get; set; }
     public required string? LowestFolderPath { get; set; }
     public required string SeriesName { get; set; }

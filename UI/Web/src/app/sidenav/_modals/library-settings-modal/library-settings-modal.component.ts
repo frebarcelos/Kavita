@@ -77,6 +77,8 @@ enum StepID {
   Advanced = 3
 }
 
+import {FolderOrganizationSettingComponent} from './folder-organization-setting.component';
+
 interface FormModel {
   id: number;
   name: string;
@@ -91,6 +93,7 @@ interface FormModel {
   allowMetadataMatching: boolean;
   collapseSeriesRelationships: boolean;
   enableMetadata: boolean;
+  folderBasedOrganization: boolean;
   removePrefixForSortName: boolean;
   inheritWebLinksFromFirstChapter: boolean;
   defaultLanguage: string;
@@ -104,7 +107,7 @@ interface FormModel {
   selector: 'app-library-settings-modal',
   imports: [NgbModalModule, NgbNavLink, NgbNavItem, NgbNavContent, NgbTooltip,
     SentenceCasePipe, NgbNav, NgbNavOutlet, CoverImageChooserComponent, TranslocoModule, DefaultDatePipe,
-    FileTypeGroupPipe, EditListComponent, SettingItemComponent, SettingSwitchComponent, SettingButtonComponent, LibraryTypeSubtitlePipe, NgTemplateOutlet, TypeaheadComponent, TabTitlePipe, MetadataProviderTitlePipe, UtcToLocalTimePipe, FormFieldDirective, ValidationErrorsComponent, FormField, SettingSelectComponent],
+    FileTypeGroupPipe, EditListComponent, SettingItemComponent, SettingSwitchComponent, SettingButtonComponent, LibraryTypeSubtitlePipe, NgTemplateOutlet, TypeaheadComponent, TabTitlePipe, MetadataProviderTitlePipe, UtcToLocalTimePipe, FormFieldDirective, ValidationErrorsComponent, FormField, SettingSelectComponent, FolderOrganizationSettingComponent],
   templateUrl: './library-settings-modal.component.html',
   styleUrls: ['./library-settings-modal.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -134,6 +137,13 @@ export class LibrarySettingsModalComponent implements OnInit {
   library = model<Library>();
 
   active = Tabs.General;
+  setFolderBasedOrganization(enabled: boolean) {
+    this.formModel.update(current => ({
+      ...current,
+      folderBasedOrganization: enabled,
+      ...(enabled ? {enableMetadata: false, allowMetadataMatching: false, manageCollections: false, manageReadingLists: false} : {})
+    }));
+  }
   chooserConfig = signal<CoverImageChooserConfig>({});
   protected readonly excludePatternTooltip = `<span>` + translate('library-settings-modal.exclude-patterns-tooltip') +
   `<a class="ms-1" href="${WikiLink.ScannerExclude}" rel="noopener noreferrer" target="_blank">${translate('library-settings-modal.help')}` +
@@ -146,6 +156,7 @@ export class LibrarySettingsModalComponent implements OnInit {
     collapseSeriesRelationships: false,
     defaultLanguage: "",
     enableMetadata: true,
+    folderBasedOrganization: false,
     excludePatterns: [],
     folderWatching: true,
     folders: [],
@@ -164,6 +175,10 @@ export class LibrarySettingsModalComponent implements OnInit {
   formGroup = form(this.formModel, path => {
     required(path.name);
     required(path.type);
+    disabled(path.enableMetadata, {when: ctx => ctx.valueOf(path.folderBasedOrganization)});
+    disabled(path.allowMetadataMatching, {when: ctx => ctx.valueOf(path.folderBasedOrganization)});
+    disabled(path.manageCollections, {when: ctx => ctx.valueOf(path.folderBasedOrganization)});
+    disabled(path.manageReadingLists, {when: ctx => ctx.valueOf(path.folderBasedOrganization)});
     disabled(path.allowScrobbling, { when: (ctx) => {
       const libraryType = ctx.valueOf(path.type);
       return !this.scrobbleEnabledLibraries().includes(libraryType);
@@ -292,6 +307,7 @@ export class LibrarySettingsModalComponent implements OnInit {
       collapseSeriesRelationships: library.collapseSeriesRelationships,
       defaultLanguage: library.defaultLanguage,
       enableMetadata: library.enableMetadata,
+      folderBasedOrganization: library.folderBasedOrganization ?? false,
       excludePatterns: library.excludePatterns,
       folderWatching: library.folderWatching,
       folders: library.folders,

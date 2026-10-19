@@ -1345,17 +1345,22 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
     public Task<Series?> GetFullSeriesByAnyName(string seriesName, string localizedName, int libraryId,
         MangaFormat format, bool withFullIncludes = true, CancellationToken ct = default)
     {
-        var query = context.Series
-            .Where(s => s.LibraryId == libraryId)
+        var query = context.Series.Where(s => s.LibraryId == libraryId)
             .Where(s => s.Format == format && format != MangaFormat.Unknown)
             .WhereSeriesNameMatches(seriesName, localizedName);
-        if (!withFullIncludes)
-        {
-            return query.SingleOrDefaultAsync(ct);
-        }
+        return (withFullIncludes ? IncludeForScan(query) : query).SingleOrDefaultAsync(ct);
+    }
 
+    public Task<Series?> GetFullSeriesByFolderAsync(int libraryId, string folder, CancellationToken ct = default)
+    {
+        var query = context.Series.Where(s => s.LibraryId == libraryId && s.FolderPath == folder);
+        return IncludeForScan(query).SingleOrDefaultAsync(ct);
+    }
+
+    private static IQueryable<Series> IncludeForScan(IQueryable<Series> query)
+    {
 #nullable disable
-        query = query.Include(s => s.Library)
+        return query.Include(s => s.Library)
 
             .Include(s => s.Metadata)
             .ThenInclude(m => m.People)
@@ -1385,8 +1390,6 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
             .ThenInclude(c => c.Files)
 
             .AsSplitQuery();
-        return query.SingleOrDefaultAsync(ct);
-
 #nullable enable
     }
 
@@ -1513,6 +1516,7 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
             Index(s.NormalizedName, s);
             Index(s.NormalizedLocalizedName, s);
             Index(s.NormalizedOriginalName, s);
+            Index(s.FolderKey, s);
         }
 
         // For each seen key, keep the highest-Id match. Matching on all three normalized columns keeps
@@ -1527,9 +1531,18 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
                 keepIds.Add(existingSeriesId);
             }
 
-            if (!byName.TryGetValue(key.NormalizedName, out var matches)) continue;
+            if (!byName.TryGetValue(string.IsNullOrEmpty(key.FolderKey) ? key.NormalizedName : key.FolderKey, out var matches)) continue;
+
+            if (!string.IsNullOrEmpty(key.FolderKey))
+            {
+                // A folder seen on disk keeps every series stored for it. Legacy catalogs may hold one per format
+                // until migrated; deleting all but one would delete their chapters and personal data.
+                keepIds.UnionWith(matches.Where(m => m.FolderKey == key.FolderKey).Select(m => m.Id));
+                continue;
+            }
 
             var best = matches
+                .Where(m => string.IsNullOrEmpty(key.FolderKey) || m.FolderKey == key.FolderKey)
                 .Where(m => m.Format == key.Format || m.Format == MangaFormat.Unknown)
                 .OrderBy(m => m.Id)
                 .LastOrDefault();
@@ -1841,7 +1854,7 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
         return await context.Series
             .Where(s => s.LibraryId == libraryId)
             .Select(s => new SeriesNameMatch(s.Id, s.Format, s.NormalizedName, s.NormalizedLocalizedName,
-                s.NormalizedOriginalName))
+                s.NormalizedOriginalName, s.Library.FolderBasedOrganization ? s.FolderPath ?? string.Empty : string.Empty))
             .ToListAsync(ct);
     }
 
@@ -1861,6 +1874,7 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
                     LastScanned = s.LastFolderScanned,
                     // Placeholders must group with the parsed files, which carry the original name, not a user rename
                     SeriesName = s.OriginalName ?? s.Name,
+                    FolderKey = s.Library.FolderBasedOrganization ? s.FolderPath ?? string.Empty : string.Empty,
                     FolderPath = s.FolderPath,
                     LowestFolderPath = s.LowestFolderPath,
                     Format = s.Format,

@@ -752,6 +752,9 @@ namespace Kavita.Database.Migrations
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
+                    b.Property<bool>("FolderBasedOrganization")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("FolderWatching")
                         .HasColumnType("INTEGER");
 

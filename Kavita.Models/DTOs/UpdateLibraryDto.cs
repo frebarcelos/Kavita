@@ -44,6 +44,8 @@ public sealed record UpdateLibraryDto
     /// <inheritdoc cref="Library.EnableMetadata"/>
     [Required]
     public bool EnableMetadata { get; init; }
+    /// <inheritdoc cref="Library.FolderBasedOrganization"/>
+    public bool? FolderBasedOrganization { get; init; }
     /// <inheritdoc cref="Library.RemovePrefixForSortName"/>
     [Required]
     public bool RemovePrefixForSortName { get; init; }

@@ -181,7 +181,7 @@ public partial class ParseScannedFiles
             return _eventHub.SendMessageAsync(MessageFactory.NotificationProgress,
                 MessageFactory.FileScanProgressEvent(folder, library.Id, library.Name, ProgressEventType.Updated,
                     MessageEventCode.ScanListingFolders));
-        });
+        }, withRootFiles: library.FolderBasedOrganization);
         ListTime += listWatch.Elapsed;
         var allDirectories = tree.Folders;
 
@@ -307,6 +307,20 @@ public partial class ParseScannedFiles
             timings.ParentChangeCheck.ElapsedMilliseconds, timings.ParentSurfaceFiles.ElapsedMilliseconds,
             timings.Events.ElapsedMilliseconds);
 
+        if (library.FolderBasedOrganization)
+        {
+            var rootFiles = LibraryFiles(tree.FilesIn(tree.Root), library.Type);
+            var rootOwners = known.OwnersIn(tree.Root);
+            var rootFailures = FailedFilesIn(failedFiles, folder => folder == tree.Root);
+            if (known.IsUnchanged(rootFiles, rootOwners, rootFailures, folder => folder == tree.Root, WriteTimesToBackfill))
+                HandleUnchangedFolder(result, resultFolders, folderPath, tree.Root, rootOwners, true);
+            else
+            {
+                MarkRead(rootFailures);
+                _readFolders.Add(tree.Root);
+                AddChangedFolder(result, resultFolders, tree.Root, folderPath, rootFiles);
+            }
+        }
         return result;
     }
 
@@ -584,12 +598,13 @@ public partial class ParseScannedFiles
         if (info.Series == string.Empty) return ParseIssues.FromFailedParse(info);
 
         var normalizedSeries = info.Series.ToNormalized();
+        var identity = string.IsNullOrEmpty(info.FolderKey) ? normalizedSeries : info.FolderKey;
 
         // Do not ingest series with no meaningful information as title. These break merging as they'll all merge into each other
         // They would also merge all series that don't have localized names previously
         // This does create the edge case where some series may really not have any meaningful information.
         // But until this is reported, we should ignore it and play it safe!
-        if (string.IsNullOrEmpty(normalizedSeries))
+        if (string.IsNullOrEmpty(normalizedSeries) && string.IsNullOrEmpty(info.FolderKey))
         {
             _logger.LogCritical("[ScannerService] {SeriesName} @ {FileName} is empty when normalized, this file will not be ingested! The filename does not follow our guidelines or this is a bug in the parser, please report this! https://github.com/Kareadita/Kavita/issues",
                 info.Series, info.Filename);
@@ -599,7 +614,9 @@ public partial class ParseScannedFiles
         }
 
         // BUG: This will fail for Solo Leveling & Solo Leveling (Manga)
-        var matches = index.Find(info.Format, normalizedSeries, info.SeriesSort.ToNormalized(), info.LocalizedSeries.ToNormalized());
+        var matches = string.IsNullOrEmpty(info.FolderKey)
+            ? index.Find(info.Format, identity, info.SeriesSort.ToNormalized(), info.LocalizedSeries.ToNormalized())
+            : index.Find(SeriesNameIndex.AnyFormat, identity, string.Empty, string.Empty);
         if (matches.Count > 1)
         {
             var names = matches.Select(m => m.Name).ToList();
@@ -613,6 +630,7 @@ public partial class ParseScannedFiles
             : index.Add(new ParsedSeries
             {
                 Format = info.Format,
+                FolderKey = info.FolderKey,
                 Name = info.Series,
                 NormalizedName = normalizedSeries
             });
@@ -634,6 +652,9 @@ public partial class ParseScannedFiles
     /// </summary>
     private sealed class SeriesNameIndex
     {
+        /// <summary>Folder keys are indexed under this format, as one folder is one series whatever its formats</summary>
+        public const MangaFormat AnyFormat = MangaFormat.Unknown;
+
         private readonly Dictionary<(MangaFormat Format, string NormalizedName), ParsedSeries> _keys = new();
         private readonly HashSet<ParserInfo> _tracked = new(ReferenceEqualityComparer.Instance);
 
@@ -648,9 +669,9 @@ public partial class ParseScannedFiles
 
         public ParsedSeries Add(ParsedSeries key)
         {
-            if (!string.IsNullOrEmpty(key.NormalizedName))
+            if (!string.IsNullOrEmpty(key.NormalizedName) || !string.IsNullOrEmpty(key.FolderKey))
             {
-                _keys.TryAdd((key.Format, key.NormalizedName), key);
+                _keys.TryAdd(string.IsNullOrEmpty(key.FolderKey) ? (key.Format, key.NormalizedName) : (AnyFormat, key.FolderKey), key);
             }
 
             return key;
@@ -758,7 +779,7 @@ public partial class ParseScannedFiles
 
         _logger.LogDebug("\t[ScannerService] Library {LibraryName} Step 1.D: Merge any localized series with series {Folder}", library.Name, folderPath);
         stepWatch.Restart();
-        scanResults = MergeLocalizedSeriesAcrossScanResults(scanResults);
+        if (!library.FolderBasedOrganization) scanResults = MergeLocalizedSeriesAcrossScanResults(scanResults);
 
         _logger.LogDebug("\t[ScannerService] Library {LibraryName} Step 1.E: Group all parsed data into logical Series", library.Name);
         var rejected = TrackSeriesAcrossScanResults(scanResults, scannedSeries);
@@ -1075,6 +1096,7 @@ public partial class ParseScannedFiles
                     var placeholder = new ParserInfo
                     {
                         Series = fp.SeriesName,
+                        FolderKey = fp.FolderKey,
                         Format = fp.Format,
                         UnchangedFolderPath = normalizedFolder,
                         UnchangedFolderIsShallow = result.IsShallow,
@@ -1158,6 +1180,7 @@ public partial class ParseScannedFiles
             var placeholder = new ParserInfo
             {
                 Series = ownerFiles.Key.SeriesName,
+                FolderKey = ownerFiles.Key.FolderKey,
                 Format = ownerFiles.Key.Format,
                 UnchangedFiles = [.. ownerFiles.Select(k => k.File.Path)],
             };
@@ -1175,6 +1198,15 @@ public partial class ParseScannedFiles
         result.ParserInfos = infos;
     }
 
+    private ParseFileResult ParseLibraryFile(string path, string folder, string libraryRoot, Library library)
+    {
+        if (!library.FolderBasedOrganization)
+            return _readingItemService.ParseFile(path, folder, libraryRoot, library.Type, library.EnableMetadata);
+
+        var result = new FolderParser(_directoryService).Parse(path, folder, libraryRoot, library.Type, false);
+        return result.Success ? new ParseFileResult(result.Info) : ParseFileResult.Failed(ParseIssues.FromFailedParse(result.Info));
+    }
+
     private async Task ParseAt(ScanResult result, Library library, ParseFileResult?[] parsed, IList<int> indexes)
     {
         var files = result.Files;
@@ -1185,7 +1217,7 @@ public partial class ParseScannedFiles
         {
             foreach (var i in indexes)
             {
-                parsed[i] = _readingItemService.ParseFile(files[i].Path, folder, result.LibraryRoot, library.Type, library.EnableMetadata);
+                parsed[i] = ParseLibraryFile(files[i].Path, folder, result.LibraryRoot, library);
             }
             return;
         }
@@ -1200,7 +1232,7 @@ public partial class ParseScannedFiles
             new ParallelOptions { MaxDegreeOfParallelism = maxConcurrency },
             (i, _) =>
             {
-                parsed[i] = _readingItemService.ParseFile(files[i].Path, folder, result.LibraryRoot, library.Type, library.EnableMetadata);
+                parsed[i] = ParseLibraryFile(files[i].Path, folder, result.LibraryRoot, library);
                 return ValueTask.CompletedTask;
             });
     }

@@ -53,6 +53,8 @@ public class Library : IEntityDate, IHasCoverImage
     /// Should Kavita read metadata files from the library
     /// </summary>
     public bool EnableMetadata { get; set; } = true;
+    /// <summary>Use physical folders and filenames for organization, ignoring embedded metadata.</summary>
+    public bool FolderBasedOrganization { get; set; }
     /// <summary>
     /// Should Kavita remove sort articles "The" for the sort name
     /// </summary>
