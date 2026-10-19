@@ -1,0 +1,48 @@
+name: Offline server F1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - deployment/offline/**
+      - scripts/offline/**
+      - .github/workflows/offline-server.yml
+  push:
+    branches: [develop]
+    paths:
+      - deployment/offline/**
+      - scripts/offline/**
+      - .github/workflows/offline-server.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      COMPOSE_PROJECT_NAME: kavita-offline-f1-ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Testar contratos e ferramentas
+        run: node --test scripts/offline/*.test.mjs
+      - name: Testar migração de catálogo com fixtures SQLite
+        run: python3 -m unittest discover -s scripts/offline -p 'test_*.py'
+      - name: Preparar amostra sintética
+        run: node scripts/offline/prepare.mjs
+      - name: Iniciar servidor de teste e aguardar saúde
+        run: docker compose --env-file _temp/offline-f1/.env -f deployment/offline/compose.yaml up -d --wait --wait-timeout 180
+      - name: Verificar permissões dentro do container
+        run: node scripts/offline/verify-readonly.mjs _temp/offline-f1/.env
+      - name: Conferir preservação de todos os arquivos
+        run: node scripts/offline/library-manifest.mjs verify _temp/offline-f1/library _temp/offline-f1/before.json
+      - name: Diagnóstico do servidor em caso de falha
+        if: failure()
+        run: docker compose --env-file _temp/offline-f1/.env -f deployment/offline/compose.yaml logs --tail 100
+      - name: Remover apenas o ambiente descartável deste job
+        if: always()
+        run: docker compose --env-file _temp/offline-f1/.env -f deployment/offline/compose.yaml down --volumes
