@@ -256,6 +256,7 @@ public class Startup
         ExecuteMigrations(serviceProvider, directoryService, unitOfWork, versionService, logger);
 
         app.UseMiddleware<ExceptionMiddleware>();
+        app.UseMiddleware<FolderCatalogMaintenanceMiddleware>();
         app.UseMiddleware<SecurityEventMiddleware>();
 
         if (env.IsDevelopment())
