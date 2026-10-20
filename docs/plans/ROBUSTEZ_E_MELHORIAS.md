@@ -11,6 +11,27 @@ Este plano cobre os dois projetos e o tablet. Ele reúne:
 
 O histórico da v1.0 e do modo "Livro" fica em [MELHORIAS.md](MELHORIAS.md). As ideias de experiência daquele documento (seções 1 a 4) continuam valendo e entram aqui na Fase 6.
 
+## Andamento
+
+Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit e a suíte indicada.
+
+| Item | Situação | Onde |
+| --- | --- | --- |
+| 0.1 | Feito: modo "Livro" commitado, tag `fork-v1.1` | Kavita `c05402e`…`35046be` |
+| 0.2 | Feito: `build-fork-image.ps1` exige árvore limpa e grava o SHA no label | Kavita `3951477` |
+| 0.3 | Feito no código: backup consistente, retenção 7+4, agendamento. **Falta o usuário registrar a tarefa** e o primeiro teste de restauração com dados reais | Kavita `3c6a08a`; testes de retenção (7) e de backup/restauração (10) |
+| 0.4, 5.1 | Feito: `deploy-fork.ps1` com checkpoint sem cache, health, volta automática e 2 checkpoints. **Falta o primeiro uso no principal** | Kavita `3951477`; 17 testes de deploy |
+| 5.2 | Feito: a imagem só contém o publish do fork | `Dockerfile.fork` |
+| 0.6 | Feito: guia de implantação sem o rollback inexistente | `deployment/offline/README.md` |
+| 1.1, 1.2 | Feito: progresso pendente só sai depois de aceito, e só como foi enviado | Kover `ec6ac14` |
+| 1.3, 1.4 | Feito: troca de conta e limpar banco protegem o pendente | Kover `757579a` |
+| 1.5 | Feito: fase `pendingProgress` sem dependência do catálogo | Kover `f23cea4` |
+| 1.6 | Feito: a leitura mais recente vence (servidor) e hora em UTC (Kover) | Kavita `1e3f299`; Kover `e8eb9d4` |
+| 1.7 | Feito: uma gravação a cada 300 ms por usuário e capítulo | Kavita `528fbc3` |
+| 1.8 | Feito: leitor web grava depois de 500 ms na página | Kavita `c3c31ba` |
+
+Imagem do servidor com tudo acima: `kavita-fork:fork-v1.1-5-g528fbc3e7`. Suítes: serviços 3.032 aprovados (sem falhas), servidor 110/110, web 78/78, Kover 370/370 e `flutter analyze` limpo.
+
 ## Como ler
 
 - **Origem:** **[F]** é fato observado no código, na configuração ou em execução; **[H]** é hipótese a confirmar com teste antes de corrigir.
