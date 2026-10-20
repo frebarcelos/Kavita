@@ -1,0 +1,53 @@
+app-book-renderer {
+  display: block;
+}
+
+app-book-renderer .book-area {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+app-book-renderer .book-page {
+  background-color: transparent;
+}
+
+app-book-renderer .book-page img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+// PageFlip sets an inline width of 100%, and the height follows the width; without this cap a wide window makes the
+// book taller than the screen
+app-book-renderer .stf__parent {
+  max-width: calc(100dvh * var(--book-ratio, 1)) !important;
+}
+
+app-book-renderer .book-page {
+  overflow: hidden;
+}
+
+// A wide page lies across both sides: each half shows its side of an image twice as wide as the page
+app-book-renderer .book-half-left img,
+app-book-renderer .book-half-right img {
+  width: 200%;
+  max-width: none;
+}
+
+app-book-renderer .book-half-right img {
+  margin-left: -100%;
+}
+
+// With the book open, the two pages meet at the middle instead of each image centring in its own side
+app-book-renderer .stf__wrapper.--landscape .stf__item.--left:not(.book-half-left) img {
+  object-position: right center;
+}
+
+app-book-renderer .stf__wrapper.--landscape .stf__item.--right:not(.book-half-right) img {
+  object-position: left center;
+}
