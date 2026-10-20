@@ -34,7 +34,18 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 4.4 | Feito: capas de pasta acompanham a troca de raízes da biblioteca | Kavita `f219a9e` |
 | 4.5 | Conferido: já tratado no código | — |
 | 4.6, 4.7 | Feito: capa de pasta removida apaga o arquivo; referências deixadas por scan interrompido são reparadas | Kavita `be05b67`, `4df68e1` |
-| 4.9 | Testado: o watcher não recebe eventos do mount do Windows, mas a data da pasta chega. Solução: scan agendado incremental a cada hora, procedimento no guia de implantação | `deployment/offline/README.md`; teste `Scan_NewFileInAKnownFolder_IsFoundWithoutForcing_AndKeepsTheOtherChapters` |
+| 4.8 | Medido, sem índice: com 20 mil arquivos em 2 mil pastas, o modo por pastas acompanha o upstream e `folder-series` leva 10–16 ms. O tempo está na varredura do disco, não na busca por `FolderPath`. A medição achou o erro corrigido em `df37f33` | `FolderOrganizationScanBenchmark` (tabela abaixo) |
+| 4.9 | Testado: o watcher não recebe eventos do mount do Windows, mas a data da pasta chega. Solução: scan agendado incremental a cada hora, procedimento no guia de implantação. Um arquivo novo do mesmo tamanho de outro da pasta era tomado por renomeação; corrigido | `deployment/offline/README.md`; Kavita `df37f33`; teste `Scan_NewFileInAKnownFolder_IsFoundWithoutForcing_AndKeepsTheOtherChapters` |
+
+Medição do 4.8 (2026-10-20, container do SDK com 4 CPUs, SQLite em arquivo temporário, um contexto por série como no servidor; arquivos vazios, sem leitura de páginas):
+
+| Biblioteca | Primeiro scan | Scan sem mudança | Um arquivo novo | `folder-series` |
+| --- | --- | --- | --- | --- |
+| 3 mil arquivos, por pastas | 13,9 s | 0,16 s | 0,26 s | 13 ms |
+| 20 mil arquivos, por pastas | 78–89 s | 3,9–10,4 s | 7,5–12,8 s | 10–16 ms |
+| 20 mil arquivos, upstream (sem pastas) | 76 s | 3,7 s | 6,8 s | 12 ms |
+
+Com 20 mil arquivos, o scan sem mudança gasta quase todo o tempo na varredura e comparação dos arquivos, que é código do upstream. O acervo atual tem cerca de 934 arquivos. Para repetir: `KAVITA_BENCH_FOLDERS=2000` e `KAVITA_BENCH_OUT=<arquivo>` no teste `FolderOrganizationScanBenchmark`; `KAVITA_BENCH_CLASSIC=1` mede sem a organização por pastas.
 
 Imagem do servidor com tudo acima: `kavita-fork:fork-v1.1-5-g528fbc3e7`. Suítes: serviços 3.032 aprovados (sem falhas), servidor 110/110, web 78/78, Kover 370/370 e `flutter analyze` limpo.
 

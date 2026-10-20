@@ -108,8 +108,10 @@ public class ScannerHelper
     }
 
     /// <param name="wrapScanReader">Replaces the reader used while walking and parsing, ProcessSeries keeps the real one</param>
+    /// <param name="scopedUnitOfWork">Gives every series its own unit of work, as the server does; by default all share one</param>
     public ScannerService CreateServices(DirectoryService? ds = null, IFileSystem? fs = null,
-        Func<IReadingItemService, IReadingItemService>? wrapScanReader = null, IEventHub? eventHub = null)
+        Func<IReadingItemService, IReadingItemService>? wrapScanReader = null, IEventHub? eventHub = null,
+        Func<IUnitOfWork>? scopedUnitOfWork = null)
     {
         fs ??= new FileSystem();
         ds ??= new DirectoryService(Substitute.For<ILogger<DirectoryService>>(), fs);
@@ -123,24 +125,37 @@ public class ScannerHelper
 
 
 
-        var processSeries = new ProcessSeries(_unitOfWork, Substitute.For<ILogger<ProcessSeries>>(),
-            eventHub,
-            ds, readingItemService, new FileService(fs),
-            Substitute.For<IReadingListService>(),
-            Substitute.For<IExternalMetadataService>());
+        IServiceScope CreateScope(IUnitOfWork unitOfWork)
+        {
+            var processSeries = new ProcessSeries(unitOfWork, Substitute.For<ILogger<ProcessSeries>>(),
+                eventHub,
+                ds, readingItemService, new FileService(fs),
+                Substitute.For<IReadingListService>(),
+                Substitute.For<IExternalMetadataService>());
 
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        serviceProvider.GetService(typeof(IUnitOfWork)).Returns(_unitOfWork);
-        serviceProvider.GetService(typeof(IProcessSeries)).Returns(processSeries);
-        serviceProvider.GetService(typeof(IMetadataService)).Returns(Substitute.For<IMetadataService>());
-        serviceProvider.GetService(typeof(IWordCountAnalyzerService))
-            .Returns(Substitute.For<IWordCountAnalyzerService>());
+            var serviceProvider = Substitute.For<IServiceProvider>();
+            serviceProvider.GetService(typeof(IUnitOfWork)).Returns(unitOfWork);
+            serviceProvider.GetService(typeof(IProcessSeries)).Returns(processSeries);
+            serviceProvider.GetService(typeof(IMetadataService)).Returns(Substitute.For<IMetadataService>());
+            serviceProvider.GetService(typeof(IWordCountAnalyzerService))
+                .Returns(Substitute.For<IWordCountAnalyzerService>());
 
-        var scope = Substitute.For<IServiceScope>();
-        scope.ServiceProvider.Returns(serviceProvider);
+            var scope = Substitute.For<IServiceScope>();
+            scope.ServiceProvider.Returns(serviceProvider);
+            return scope;
+        }
 
         var scopeFactory = Substitute.For<IServiceScopeFactory>();
-        scopeFactory.CreateScope().Returns(scope);
+        if (scopedUnitOfWork == null)
+        {
+            // Built before Returns: NSubstitute cannot configure other substitutes inside it
+            var sharedScope = CreateScope(_unitOfWork);
+            scopeFactory.CreateScope().Returns(sharedScope);
+        }
+        else
+        {
+            scopeFactory.CreateScope().Returns(_ => CreateScope(scopedUnitOfWork()));
+        }
 
         var scanner = new ScannerService(_unitOfWork, Substitute.For<ILogger<ScannerService>>(),
             Substitute.For<IMetadataService>(),

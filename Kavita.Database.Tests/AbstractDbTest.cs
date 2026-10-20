@@ -22,8 +22,12 @@ public abstract class AbstractDbTest(ITestOutputHelper testOutputHelper): Abstra
 
     private SqliteConnection? _connection;
     private DataContext? _context;
+    private DbContextOptions? _contextOptions;
+    private IMapper? _mapper;
 
-    protected async Task<(IUnitOfWork, DataContext, IMapper)> CreateDatabase()
+    /// <param name="databaseFile">A file instead of memory: every context then opens its own connection, as on the
+    /// server, so contexts from <see cref="NewUnitOfWork"/> can work in parallel</param>
+    protected async Task<(IUnitOfWork, DataContext, IMapper)> CreateDatabase(string? databaseFile = null)
     {
 
         GlobalConfiguration.Configuration.UseInMemoryStorage();
@@ -34,14 +38,17 @@ public abstract class AbstractDbTest(ITestOutputHelper testOutputHelper): Abstra
             await _context!.DisposeAsync();
             await _connection.DisposeAsync();
         }
-        _connection = new SqliteConnection("Filename=:memory:");
+        _connection = new SqliteConnection(databaseFile == null ? "Filename=:memory:" : $"Data Source={databaseFile}");
         await _connection.OpenAsync();
 
-        var contextOptions = ((DbContextOptionsBuilder)new DbContextOptionsBuilder<DataContext>()
-                .UseSqlite(_connection)).EnableSensitiveDataLogging()
+        var builder = new DbContextOptionsBuilder<DataContext>();
+        var contextOptions = ((DbContextOptionsBuilder)(databaseFile == null
+                ? builder.UseSqlite(_connection)
+                : builder.UseSqlite(_connection.ConnectionString))).EnableSensitiveDataLogging()
             .Options;
 
         _context = new DataContext(contextOptions);
+        _contextOptions = contextOptions;
 
         await _context.Database.EnsureCreatedAsync();
 
@@ -53,6 +60,7 @@ public abstract class AbstractDbTest(ITestOutputHelper testOutputHelper): Abstra
             cfg.AddMaps(typeof(AutoMapperProfiles).Assembly);
         });
         var mapper = config.CreateMapper();
+        _mapper = mapper;
 
         var unitOfWork = new UnitOfWork(_context, mapper, null!);
 
@@ -60,6 +68,14 @@ public abstract class AbstractDbTest(ITestOutputHelper testOutputHelper): Abstra
 
         return (unitOfWork, _context, mapper);
     }
+
+    /// <summary>
+    /// A unit of work with its own context on the database of <see cref="CreateDatabase"/>, like the scope the server
+    /// opens per request or per scanned series
+    /// </summary>
+    protected IUnitOfWork NewUnitOfWork() =>
+        new UnitOfWork(new DataContext(_contextOptions ?? throw new InvalidOperationException("Call CreateDatabase first")),
+            _mapper!, null!);
 
     private async Task SeedDb(DataContext context)
     {
