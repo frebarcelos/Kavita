@@ -32,6 +32,7 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 1.8 | Feito: leitor web grava depois de 500 ms na página | Kavita `c3c31ba` |
 | 2.x | Feito no Kover: novas tentativas, cancelamento sem regravar, falha visível, selos por estado, checagem de espaço e serviço em primeiro plano. Aceite no S6 Lite em 2026-10-20: selos na tela inicial; download concluído com o app em segundo plano e o serviço parando sozinho; pedido da permissão de notificação e notificação publicada; remover a cópia manteve o "Continuar lendo" | Kover `8760436`, `59e4298`, `d2f5924`, `9a05513`, `e05612f`, `4a7ea0e`; 397 testes |
 | 3.2 | Feito: "Configurações" mostra a versão com o `git describe` do build (`tool/build_apk.ps1`). No S6 Lite: `v1.0.0 (1) · edcddfc` | Kover `edcddfc`; 399 testes |
+| 3.4 | Preparado, sem push: `fork-ci.yml` do Kover roda em `fork/**` (geração de código, migrações, formato, análise, testes e APK como artefato); CI e publicação do upstream ficam restritas a `rodonisi/kover`. Conferido localmente: formato (28 arquivos do fork formatados), `make-migrations` sem diferença, análise limpa e 399 testes. **A primeira execução depende do push** | Kover `b5597a9` e o commit da CI |
 | 4.1–4.3 | Feito: pasta ou arquivo renomeado e biblioteca montada em outro caminho mantêm série, capítulos, progresso e capa. Cópia ou caso ambíguo vira série nova | Kavita `0b7aeae`, `ff4d1f5` |
 | 4.4 | Feito: capas de pasta acompanham a troca de raízes da biblioteca | Kavita `f219a9e` |
 | 4.5 | Conferido: já tratado no código | — |
