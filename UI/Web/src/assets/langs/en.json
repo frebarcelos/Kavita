@@ -3504,6 +3504,7 @@
         "light-theme-alt": "Light Theme",
         "dark-theme-alt": "Dark Theme",
         "close-reader-alt": "Close Reader",
+        "book-mode-on": "Turn pages like a book",
         "toggle-incognito": "Turn off Incognito Mode",
         "shortcuts-menu-alt": "{{manga-reader.shortcuts-menu-alt}}"
     },

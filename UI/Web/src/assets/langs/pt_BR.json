@@ -1474,6 +1474,7 @@
         "light-theme-alt": "Tema Claro",
         "dark-theme-alt": "Tema Escuro",
         "close-reader-alt": "Fechar Leitor",
+        "book-mode-on": "Virar as páginas como um livro",
         "toggle-incognito": "Desativar o Modo Anônimo",
         "shortcuts-menu-alt": "{{manga-reader.shortcuts-menu-alt}}"
     },

@@ -4,6 +4,8 @@ import {DOCUMENT, Location} from '@angular/common';
 import {Router} from '@angular/router';
 import {environment} from '../../environments/environment';
 import {ChapterInfo} from '../manga-reader/_models/chapter-info';
+import {readerRoute} from '../_helpers/reader-format';
+import {readBookMode} from '../manga-reader/_components/book-renderer/book-mode';
 import {Chapter} from '../_models/chapter';
 import {HourEstimateRange} from '../_models/series-detail/hour-estimate-range';
 import {MangaFormat} from '../_models/manga-format';
@@ -129,15 +131,8 @@ export class ReaderService {
 
 
   getNavigationArray(libraryId: number, seriesId: number, chapterId: number, format: MangaFormat) {
-    if (format === undefined) format = MangaFormat.ARCHIVE;
-
-    if (format === MangaFormat.EPUB) {
-      return ['library', libraryId, 'series', seriesId, 'book', chapterId];
-    } else if (format === MangaFormat.PDF) {
-      return ['library', libraryId, 'series', seriesId, 'pdf', chapterId];
-    } else {
-      return ['library', libraryId, 'series', seriesId, 'manga', chapterId];
-    }
+    // Fork (V1): the book mode chosen in this browser sends PDF to the image reader
+    return readerRoute(libraryId, seriesId, chapterId, format, readBookMode());
   }
 
   downloadPdf(chapterId: number) {
@@ -188,7 +183,8 @@ export class ReaderService {
   }
 
   getPageUrl(chapterId: number, page: number) {
-    return `${this.baseUrl}reader/image?chapterId=${chapterId}&apiKey=${this.encodedKey}&page=${page}`;
+    // Fork (V1): only the image reader asks for pages; a PDF chapter (book mode) is served as page images
+    return `${this.baseUrl}reader/image?chapterId=${chapterId}&apiKey=${this.encodedKey}&page=${page}&extractPdf=true`;
   }
 
   getThumbnailUrl(chapterId: number, page: number) {
@@ -199,8 +195,10 @@ export class ReaderService {
     return this.baseUrl + 'reader/bookmark-image?seriesId=' + seriesId + '&page=' + page + '&apiKey=' + encodeURIComponent(apiKey);
   }
 
-  getChapterInfo(chapterId: number, includeDimensions = false) {
-    return this.httpClient.get<ChapterInfo>(this.baseUrl + 'reader/chapter-info?chapterId=' + chapterId + '&includeDimensions=' + includeDimensions);
+  /** @param extractPdf a PDF chapter read as page images (image reader, book mode) */
+  getChapterInfo(chapterId: number, includeDimensions = false, extractPdf = false) {
+    return this.httpClient.get<ChapterInfo>(this.baseUrl + 'reader/chapter-info?chapterId=' + chapterId + '&includeDimensions=' + includeDimensions
+      + (extractPdf ? '&extractPdf=true' : ''));
   }
 
   getFileDimensions(chapterId: number) {

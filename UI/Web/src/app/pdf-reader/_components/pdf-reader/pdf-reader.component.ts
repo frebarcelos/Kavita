@@ -47,6 +47,9 @@ import {UtilityService} from "../../../shared/_services/utility.service";
 import {Chapter} from "../../../_models/chapter";
 import {User} from "../../../_models/user/user";
 import {opensInOtherReader} from "../../../_helpers/reader-format";
+import {pdfPageFromProgress, progressFromPdfPage} from "../../../_helpers/pdf-progress";
+import {MangaFormat} from "../../../_models/manga-format";
+import {readBookMode, saveBookMode} from "../../../manga-reader/_components/book-renderer/book-mode";
 
 const KEYBIND_TARGETS = [
   {keyBindTarget: KeyBindTarget.OpenHelp},
@@ -115,6 +118,8 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
    * Total pages
    */
   maxPages: number = 1;
+  /** Fork: the page count arrived; before that maxPages is a placeholder and must not limit nor finish anything */
+  private pagesKnown = false;
   bookTitle: string = '';
 
   zoomSetting: string | number = 'auto';
@@ -320,7 +325,8 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     this.calcScrollbarNeeded();
 
     this.bookService.getBookInfo(this.chapterId).subscribe(info => {
-      if (opensInOtherReader('pdf', info.seriesFormat)) {
+      // Fork (V1): with the book mode on, the image reader turns the PDF pages like a book
+      if (opensInOtherReader('pdf', info.seriesFormat, readBookMode())) {
         // Reading lists and folder series mix formats
         const params = this.readerService.getQueryParamsObject(this.incognitoMode, this.readingListMode, this.readingListId);
         this.router.navigate(this.readerService.getNavigationArray(info.libraryId, info.seriesId, this.chapterId, info.seriesFormat), {queryParams: params});
@@ -332,15 +338,17 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
     });
 
     this.readerService.getProgress(this.chapterId).subscribe(progress => {
-      this.currentPage = progress.pageNum || 1;
+      // Fork: the progress is the page index, as in the image reader and on the tablet
+      this.currentPage = pdfPageFromProgress(progress.pageNum, this.pagesKnown ? this.maxPages : undefined);
       this.cdRef.markForCheck();
     });
 
     this.seriesService.getChapter(this.chapterId).subscribe(chapter => {
       this.maxPages = chapter.pages;
+      this.pagesKnown = true;
 
-      if (this.currentPage >= this.maxPages) {
-        this.currentPage = this.maxPages - 1;
+      if (this.currentPage > this.maxPages) {
+        this.currentPage = this.maxPages;
         // Don't save progress on first load to avoid session creation, wait for a page change event
       }
       this.cdRef.markForCheck();
@@ -413,7 +421,22 @@ export class PdfReaderComponent implements OnInit, OnDestroy {
 
   saveProgress() {
     if (this.incognitoMode) return;
-    this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId, this.currentPage).subscribe();
+    this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId,
+      progressFromPdfPage(this.currentPage, this.pagesKnown ? this.maxPages : 0)).subscribe();
+  }
+
+  /** Fork (V1): turns this PDF's pages like a book, in the image reader, from the page on screen */
+  openAsBook() {
+    saveBookMode(true);
+    const params = this.readerService.getQueryParamsObject(this.incognitoMode, this.readingListMode, this.readingListId);
+    const open = () => this.router.navigate(
+      this.readerService.getNavigationArray(this.libraryId, this.seriesId, this.chapterId, MangaFormat.PDF), {queryParams: params});
+    if (this.incognitoMode) {
+      open();
+      return;
+    }
+    this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId,
+      progressFromPdfPage(this.currentPage, this.pagesKnown ? this.maxPages : 0)).subscribe({next: open, error: open});
   }
 
   closeReader() {

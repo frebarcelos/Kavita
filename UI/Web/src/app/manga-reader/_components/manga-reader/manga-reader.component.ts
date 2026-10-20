@@ -1179,10 +1179,11 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     forkJoin({
       progress: this.readerService.getProgress(this.chapterId()),
-      chapterInfo: this.readerService.getChapterInfo(this.chapterId(), true),
+      // A PDF stays here only in book mode, as page images
+      chapterInfo: this.readerService.getChapterInfo(this.chapterId(), true, this.bookMode()),
       bookmarks: this.readerService.getBookmarks(this.chapterId()),
     }).subscribe(results => {
-      if (opensInOtherReader('manga', results.chapterInfo.seriesFormat)) {
+      if (opensInOtherReader('manga', results.chapterInfo.seriesFormat, this.bookMode())) {
         // Redirect to the book reader (reading lists and folder series mix formats)
         const params = this.readerService.getQueryParamsObject(this.incognitoMode(), this.readingListMode, this.readingListId);
         this.router.navigate(this.readerService.getNavigationArray(results.chapterInfo.libraryId, results.chapterInfo.seriesId, this.chapterId(), results.chapterInfo.seriesFormat), {queryParams: params});

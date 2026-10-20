@@ -88,6 +88,12 @@
             <pdf-select-tool />
             <pdf-presentation-mode />
 
+            <!-- Fork (V1): the book mode of the image reader, on the page shown here -->
+            <button (click)="openAsBook()" class="btn-icon toolbarButton" [ngbTooltip]="t('book-mode-on')">
+              <i class="toolbar-icon fa-solid fa-book-open" [ngStyle]="{color: fontColor}" aria-hidden="true"></i>
+              <span class="visually-hidden">{{t('book-mode-on')}}</span>
+            </button>
+
             <!-- The book mode is messy, not ready for prime time -->
             <!--          @if (utilityService.getActiveBreakpoint() > Breakpoint.Mobile) {-->
             <!--            <button (click)="toggleBookPageMode()" class="btn-icon toolbarButton" [ngbTooltip]="pageLayoutMode | pdfLayoutMode" [disabled]="scrollMode === ScrollModeType.page">-->
