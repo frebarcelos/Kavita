@@ -11,6 +11,8 @@ Este conjunto é a memória versionada do projeto. A entrada automática para ag
 | [Servidor de teste](../../deployment/offline/README.md) | Configuração executável, amostra sintética, comandos e proteção do acervo |
 | [Validação F1](../validation/F1.md) | Resultados reais, limitações e aceites pendentes da implementação |
 | [KAVITA_KOVER_OFFLINE.md](../plans/KAVITA_KOVER_OFFLINE.md) | Fases verticais, entregáveis, dependências, critérios de aceite e proteção dos originais |
+| [Robustez e melhorias](../plans/ROBUSTEZ_E_MELHORIAS.md) | Plano em fases para servidor, web, implantação e tablet: riscos, deficiências, testes, aceites e decisões pendentes |
+| [Melhorias pós-v1.0](../plans/MELHORIAS.md) | Próximas melhorias dos dois projetos, incluindo a animação de virada de página no Kover, com referências |
 | [Organização do acervo](../plans/ORGANIZACAO_ACERVO.md) | Diagnóstico das três pastas e entregas para organizar séries, edições, livros e exclusões do YACReader |
 | [Validação por pastas](../validation/PASTAS.md) | Modo optativo, testes, piloto com 51 arquivos, atualização de esquema e limites de implantação |
 | [Pastas no principal](../validation/PASTAS_PRINCIPAL.md) | Migração aplicada, 931 arquivos, preservação dos dados, backup/restauração e pausa dos clientes antigos |
