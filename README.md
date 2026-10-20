@@ -114,4 +114,5 @@ Support this project by becoming a sponsor. Your logo will show up here with a l
 ### License
 * [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
 * Copyright 2020-2026
+* Includes [StPageFlip](https://github.com/Nodlik/StPageFlip) (MIT, Copyright (c) 2020 Nodlik), modified, in `UI/Web/src/app/_vendor/page-flip`
 
