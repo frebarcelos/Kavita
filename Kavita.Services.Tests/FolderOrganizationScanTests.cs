@@ -410,6 +410,32 @@ public class FolderOrganizationScanTests(ITestOutputHelper output) : AbstractDbT
     }
 
     [Fact]
+    public async Task Scan_LibraryMountedElsewhere_KeepsEverySeries()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        var library = await helper.GenerateScannerData("Mount Move - Manga",
+            ["First/Alpha v01.cbz", "Second/Beta v01.cbz"], Sized("Alpha v01.cbz", "Beta v01.cbz"));
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var before = (await Placements(context, library.Id)).ToDictionary(p => Path.GetFileName(p.Key), p => p.Value);
+
+        // The same folders, mounted at another path in the container
+        var root = await context.FolderPath.SingleAsync(f => f.LibraryId == library.Id);
+        var moved = root.Path.TrimEnd('/', '\\') + " remounted";
+        Directory.Move(root.Path, moved);
+        root.Path = moved;
+        await context.SaveChangesAsync();
+        await scanner.ScanLibrary(library.Id, true);
+
+        var after = (await Placements(context, library.Id)).ToDictionary(p => Path.GetFileName(p.Key), p => p.Value);
+        Assert.Equal(before, after);
+        Assert.Equal(2, await context.Series.CountAsync(s => s.LibraryId == library.Id));
+    }
+
+    [Fact]
     public async Task Scan_RepairsProgressLeftPointingAtAnotherVolume()
     {
         var (uow, context, _) = await CreateDatabase();
