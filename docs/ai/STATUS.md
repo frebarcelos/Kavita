@@ -111,4 +111,5 @@ Números das suítes na última execução: Kavita serviços 3046 (sem falhas), 
 - **Builds do servidor:** com mudanças locais do usuário, gere a imagem de um worktree limpo (`_temp/build-worktree`), com `npm ci --legacy-peer-deps`.
 - **Scripts no Windows PowerShell 5.1:**
   - PowerShell com textos acentuados precisa de BOM;
-  - não redirecione stderr dos testes de deploy (`2>&1`).
+  - não redirecione stderr dos testes de deploy (`2>&1`);
+  - tarefas agendadas rodam via `conhost.exe --headless powershell.exe …`: com `-WindowStyle Hidden` um console piscava na tela a cada execução.

@@ -11,7 +11,8 @@ $ErrorActionPreference = 'Stop'
 
 $script = Join-Path $PSScriptRoot 'check-health.ps1'
 $command = "& '$script' -LogDir '$LogDir'"
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$command`""
+# conhost --headless runs PowerShell without any window: -WindowStyle Hidden still flashes a console on every run
+$action = New-ScheduledTaskAction -Execute 'conhost.exe' -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -Command `"$command`""
 $atLogon = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 # Wait for the Wi-Fi and Docker after logon, then check again every few minutes
 $atLogon.Delay = 'PT2M'
@@ -21,7 +22,7 @@ $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances 
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
 if ($WhatIf) {
     Write-Output "Task '$TaskName' at logon (after 2 minutes) and every $EveryMinutes minutes, as $env:USERNAME"
-    Write-Output "powershell.exe $($action.Arguments)"
+    Write-Output "conhost.exe $($action.Arguments)"
     return
 }
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null

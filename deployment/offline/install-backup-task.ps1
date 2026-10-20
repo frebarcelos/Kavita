@@ -12,12 +12,13 @@ $ErrorActionPreference = 'Stop'
 $script = Join-Path $PSScriptRoot 'backup-config.ps1'
 $log = Join-Path $Destination 'backup.log'
 $command = "& '$script' -Destination '$Destination' *>> '$log'"
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"$command`""
+# conhost --headless runs PowerShell without any window: -WindowStyle Hidden still flashes a console on every run
+$action = New-ScheduledTaskAction -Execute 'conhost.exe' -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -Command `"$command`""
 $trigger = New-ScheduledTaskTrigger -Daily -At $At
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -AllowStartIfOnBatteries
 if ($WhatIf) {
     Write-Output "Task '$TaskName' daily at $At, as $env:USERNAME"
-    Write-Output "powershell.exe $($action.Arguments)"
+    Write-Output "conhost.exe $($action.Arguments)"
     return
 }
 New-Item -ItemType Directory -Force -Path $Destination | Out-Null
