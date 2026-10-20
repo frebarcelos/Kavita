@@ -101,6 +101,10 @@ import {PublicationStatus} from "../../../_models/metadata/publication-status";
 import {BookRendererComponent} from "../book-renderer/book-renderer.component";
 import {bookShape, isBookModeActive, readBookMode, saveBookMode} from "../book-renderer/book-mode";
 import {typicalPageRatio} from "../book-renderer/book-pages";
+import {createProgressDebouncer} from "../../_service/progress-debouncer";
+
+/** How long the reader stays on a page before its progress is saved */
+const PROGRESS_SAVE_DELAY_MS = 500;
 
 
 const PREFETCH_PAGES = 10;
@@ -377,6 +381,7 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   bookMode = signal(readBookMode());
   bookModeActive = computed(() => isBookModeActive(this.bookMode(), this.readerMode()));
+  private readonly progressSaver = createProgressDebouncer(PROGRESS_SAVE_DELAY_MS);
   bookShapeNow = computed(() => bookShape(this.effectiveLayoutMode(), this.readingDirection()));
   isWidePage = (page: number) => this.mangaReaderService.isWidePage(page);
   bookPageRatio = computed(() => typicalPageRatio(this.chapterInfo()?.pageDimensions ?? []));
@@ -845,6 +850,7 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.progressSaver.flush();
     this.readerService.resetOverrideStyles();
     this.navService.showNavBar();
     this.navService.showSideNav();
@@ -1127,6 +1133,8 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
 
   init(firstLoad: boolean, direction: 'Next' | 'Prev' | 'None' = 'None') {
+    // The previous chapter's last page is saved before this one loads
+    this.progressSaver.flush();
     this.nextChapterId = CHAPTER_ID_NOT_FETCHED;
     this.prevChapterId = CHAPTER_ID_NOT_FETCHED;
     this.nextChapterDisabled.set(false);
@@ -1196,6 +1204,7 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       // Note: If this is a re-read, page will be 1 so we need to handle that
       if (direction !== 'Prev' && (page === 0 || page === 1) && this.maxPages() === 1) {
         if (!this.incognitoMode()) {
+          this.progressSaver.cancel();
           this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId(), 1).subscribe();
         }
       }
@@ -1606,6 +1615,8 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
 
     if (saveMaxProgress && !this.incognitoMode()) {
+      // A page still pending must not arrive after the chapter is marked read
+      this.progressSaver.cancel();
       this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId(), this.maxPages() + 1).subscribe();
     }
 
@@ -1813,13 +1824,17 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
       // If the current read is a re-read, and we've paged to the first page. First set progress to 0, then to 1.
       // This ensures the session has the correct page count
       if (this.isReRead && tempPageNum == 1) {
+        this.progressSaver.cancel();
         this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId(), 0).pipe(
           switchMap(() => this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId(), tempPageNum))
         ).subscribe();
         return;
       }
 
-      this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId(), tempPageNum).subscribe();
+      // Saved once the reader stops on a page; the values are taken now, as the chapter may change before
+      const [libraryId, seriesId, volumeId, chapterId] = [this.libraryId, this.seriesId, this.volumeId, this.chapterId()];
+      this.progressSaver.schedule(() =>
+        this.readerService.saveProgress(libraryId, seriesId, volumeId, chapterId, tempPageNum).subscribe());
     }
   }
 
@@ -2028,6 +2043,7 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
     window.history.replaceState({}, '', newRoute);
     this.toastr.info(translate('toasts.incognito-off'));
     if (!this.bookmarkMode()) {
+      this.progressSaver.cancel();
       this.readerService.saveProgress(this.libraryId, this.seriesId, this.volumeId, this.chapterId(), this.pageNum()).subscribe(() => {/* No operation */});
     }
   }
