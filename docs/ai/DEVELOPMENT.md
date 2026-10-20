@@ -103,6 +103,25 @@ Scripts build-backend/build-backend-prod usam rm/cp e substituem wwwroot; no Win
 - Tratamento de falhas, autorização e compatibilidade revisados quando aplicáveis.
 - Documentação atualizada. Entrega informa resultados reais, limitações e riscos concretos.
 
+## Ferramentas desde 2026-10-20
+
+Execute da raiz do Kavita, no Windows PowerShell 5.1, sem redirecionar stderr (`2>&1`) nos testes de deploy.
+
+| Para | Comando |
+| --- | --- |
+| Testes .NET no container do SDK | `./_temp/offline-f1/yac/run.ps1 <projeto.csproj> "<filtro>" <log>` (não versionado; usa a imagem do SDK fixada acima) |
+| Testes web | `npm exec --yes --package=node@24.15.0 -- node node_modules/@angular/cli/bin/ng.js test --watch=false` em `UI/Web` |
+| Leitor ponta a ponta (7.1) | `./scripts/e2e/run.ps1 -Image <imagem>`: Kavita descartável em `127.0.0.1:5066`, biblioteca sintética, web de `UI/Web/dist/browser` montada, Chrome por CDP numa janela fora da tela; `-Keep` mantém tudo para inspeção em caso de falha |
+| Medição do scan (4.8) | teste `FolderOrganizationScanBenchmark` com `KAVITA_BENCH_FOLDERS` e `KAVITA_BENCH_OUT` |
+| Imagem do servidor | `./deployment/offline/build-fork-image.ps1` (árvore limpa; com mudanças locais, a partir de `_temp/build-worktree` e `npm ci --legacy-peer-deps`) |
+| Deploy e testes | `deploy-fork.ps1 -Image <tag>`; `tests/deploy-fork.tests.ps1 -ImageA <a> -ImageB <b>` |
+| Backup | `backup-config.ps1`; `tests/backup-retention.tests.ps1`; `tests/backup-config.tests.ps1 -Image <tag>` |
+| Saúde | `check-health.ps1 -WhatIf`; `tests/health-rules.tests.ps1`; `tests/check-health.tests.ps1 -Image <tag>` |
+| HTTPS | `enable-https.ps1`, `lan-https-only.ps1` (`-Undo`), `firewall-lan.ps1` (admin); `tests/https-proxy.tests.ps1`, `tests/enable-https.tests.ps1`, `tests/lan-https-only.tests.ps1` |
+| Kover | `flutter test`, `flutter analyze`, `dart format --set-exit-if-changed .`; APK com `..\kover\tool\build_apk.ps1 [-Mode release]` |
+
+Os scripts PowerShell com texto acentuado são salvos em UTF-8 com BOM. Documentos e imagens são binários no `.gitattributes`. Os comandos de operação estão no [guia de implantação](../../deployment/offline/README.md).
+
 ## Ferramentas da entrega offline F1
 
 A infraestrutura de teste em deployment/offline usa Node 24 e Compose; a validação estrutural da amostra EPUB usa Python 3 (biblioteca padrão). Execute da raiz:

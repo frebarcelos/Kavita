@@ -13,7 +13,7 @@ O histórico da v1.0 e do modo "Livro" fica em [MELHORIAS.md](MELHORIAS.md). As 
 
 ## Andamento
 
-Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit e a suíte indicada.
+Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit e a suíte indicada. O resumo do que está em produção e do que falta, em ordem, está em [STATUS.md](../ai/STATUS.md).
 
 | Item | Situação | Onde |
 | --- | --- | --- |
@@ -29,6 +29,7 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 6.3 | Feito: toque longo num card de pasta (Pastas e Offline) abre "Baixar pasta" com séries, quanto falta (tamanho no servidor menos o já baixado) e espaço livre, com a reserva do download; sem espaço ou sem servidor não baixa; "Remover downloads da pasta" apaga só as cópias. A sincronização completa baixa sempre as capas das séries (as demais continuam opcionais). Diálogo conferido no S6 Lite (96 MB de 11 GB livres) | Kover `1ef0fa6`, `baa6cb4`; 444 testes |
 | 6.1 | Feito no código: selo nas pastas (nuvem com check, "3/8" ou download), pela regra por capítulo e só com dados locais; séries, volumes e capítulos já tinham selo (fase 2). Conferido pelo usuário no S6 Lite em 2026-10-20 | Kover `ca2b685`; 420 testes |
 | 7.1 | Feito: `scripts/e2e/run.ps1 -Image <imagem>` sobe um Kavita descartável em `127.0.0.1` com biblioteca sintética (PDF e CBZ gerados) e a web de `UI/Web/dist/browser`, e dirige o Chrome por CDP (janela fora da tela; o visualizador do PDF não carrega em headless). Cenários do modo livro no PDF, inclusive tempestade de gravações e página responsiva. Achou um bug real (total de páginas provisório) | `scripts/e2e` |
+| 7.2, 7.3 | Cobertos pelos testes escritos como RED nas fases 1, 2 e 4 (Kover: DownloadManager, DownloadRepository, remoção com pendências, mergeProgress, troca de credencial, agregados por capítulo; servidor: renomear/mover, montagem, segunda raiz, capa ausente) | ver linhas das fases |
 | 7.5 | Feito em parte: documentos e imagens marcados como binários no `.gitattributes` (um PDF sintético só ASCII era corrompido pelo CRLF) | Kavita `474ef61` |
 | 5.7 | Feito: [roteiro de atualização](../ATUALIZAR_UPSTREAM.md) com pontos quentes, migrações, suítes e ensaio no clone. Em 2026-10-20 nenhum upstream tinha commits novos; a conferência do modelo (`has-pending-model-changes`) passou. Falta a primeira atualização real | `docs/ATUALIZAR_UPSTREAM.md` |
 | 5.3, 5.4, 5.8 | Feito no código: tarefa "Kavita - saude" no logon e a cada 15 min. Abre o Docker Desktop, inicia o container parado, reinicia uma vez o sem saúde, e notifica o que não resolve (IP da LAN ausente, sem container, sem resposta na LAN, logs acima de 200 MB). Nunca cria container nem muda o endereço. Usuário registrou a tarefa, ligou o início automático do Docker Desktop e reservou o IP no roteador. Reinício real em 2026-10-20: boot 11:04, Docker Desktop 11:06:30, tarefa 11:06:40 (esperou o Docker), container de volta às 11:07:11 pela política `unless-stopped`, saudável e respondendo no IP da LAN, sem ação manual e sem alerta. **Falta confirmar a sincronização do tablet** | `check-health.ps1`; 15 testes de regras; 8 testes com servidor descartável |

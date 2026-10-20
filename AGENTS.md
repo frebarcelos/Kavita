@@ -4,6 +4,7 @@ Estas instruções se aplicam ao repositório inteiro. Converse e escreva a docu
 
 ## Leia antes de alterar
 
+0. [Estado atual e pendências](docs/ai/STATUS.md): o que está em produção, o que foi feito e o que falta.
 1. [Índice do contexto](docs/ai/README.md).
 2. [Arquitetura e domínio](docs/ai/PROJECT_CONTEXT.md).
 3. [Desenvolvimento, TDD e validação](docs/ai/DEVELOPMENT.md).
@@ -24,6 +25,8 @@ O código e as configurações atuais são a fonte de verdade. Verifique os arqu
 - O servidor deste projeto funciona apenas no PC/rede doméstica. Mantenha 127.0.0.1 durante configuração; para tablets, publique somente no IP privado da interface doméstica e restrinja o firewall à sub-rede local. Não configurar publicação pública, encaminhamento no roteador ou túneis externos; não usar 0.0.0.0/:: para contornar conectividade.
 - Use uma conta sem Admin para o leitor, com permissão Download. O papel chamado Read Only no código restringe gerenciamento de conta e não substitui proteção do filesystem.
 - Há uma biblioteca unificada no PC para todas as contas locais. Separe progresso por pessoa/conta e downloads por dispositivo; a mesma conta pode usar vários tablets Android. Começar no Samsung Galaxy Tab S6 Lite.
+- Desde 2026-10-20 o acesso pela rede é só HTTPS: proxy Caddy com autoridade local em `<IP da LAN>:5443` (`deployment/offline/compose.https.yaml`). O HTTP do Kavita fica em `127.0.0.1`. Nunca versionar `C:\KavitaBackups` (backups, `https\root.key`, `kover-keystore`); perder a chave impede atualizar o Kover sem reinstalar, e perder a raiz exige um APK novo.
+- O progresso de um capítulo é o índice da página (0 = primeira; o total quando concluído), na web e no Kover, inclusive para PDF.
 - Os dois projetos são forks modificáveis. Prefira configurar e reaproveitar capacidades existentes antes de ampliar o código. O Kover é outro repositório: adapte estas instruções ao contexto daquele repositório antes de implementar mudanças nele.
 
 Para organizar o acervo, leia também [o plano](docs/plans/ORGANIZACAO_ACERVO.md) e [a validação](docs/validation/ORGANIZACAO_ACERVO.md). Preserve os IDs de séries, volumes e capítulos usados pelo Kover. Reindexação forçada ou troca global de metadados/tipo exige ensaio no clone completo e comparação de identidade/progresso; os comandos de organização usam scan incremental. Em 2026-10-19 o usuário autorizou apagar os registros das 7 séries auxiliares (só do banco; os arquivos no PC ficam). Em 2026-10-20, com o backup automático validado (item 0.3 do [plano de robustez](docs/plans/ROBUSTEZ_E_MELHORIAS.md)), a conferência mostrou que elas já não existem no banco do principal: a migração para pastas gerou o catálogo sem elas. Não há exclusão pendente (item 4.10).

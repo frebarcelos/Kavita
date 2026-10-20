@@ -2,6 +2,16 @@
 
 Inspeção inicial em 2026-10-17, atualizada em 2026-10-18. Fork: https://github.com/frebarcelos/kover ; upstream: https://github.com/rodonisi/kover . Pasta irmã ../kover, branch main, HEAD a654cdc37d0571322d70f8357d53b94feb19705b. Este documento orienta o plano integrado. O fork Kover também recebeu AGENTS.md com TDD, proteção dos dados locais e referências para este contexto; a regra que ignorava esse arquivo foi retirada do .gitignore.
 
+Estado em 2026-10-20: branch `fork/v1.0`, release do Kover Local instalado no S6 Lite e servidor por HTTPS. O que mudou no app e o que falta estão em [STATUS.md](STATUS.md). Novidades do fork no app:
+
+- proteção do progresso pendente;
+- downloads com novas tentativas, falha visível, checagem de espaço e serviço em segundo plano;
+- selos de download em pastas, séries, volumes e capítulos;
+- aba "Offline", filtro "Só baixados" e "Baixar pasta";
+- confiança na autoridade HTTPS local;
+- cliente da API gerado do fork;
+- versão com o `git describe`.
+
 ## Stack e organização
 
 .fvmrc fixa Flutter 3.47.7; pubspec.yaml requer Dart ^3.13.0. O código usa Riverpod/Hooks para estado e DI, Drift/SQLite para persistência, Freezed e codegen, Chopper/Swagger para API, secure storage para credenciais e Workmanager para execução em background. Confira as versões novamente antes do build.

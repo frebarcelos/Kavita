@@ -4,6 +4,7 @@ Este conjunto é a memória versionada do projeto. A entrada automática para ag
 
 | Documento | Conteúdo |
 | --- | --- |
+| [STATUS.md](STATUS.md) | **Comece aqui:** o que está em produção (servidor, tablet, chaves, tarefas), o que foi feito e o que falta, em ordem |
 | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) | Objetivo, arquitetura, domínio, fluxos, integrações e limites |
 | [KOVER_CONTEXT.md](KOVER_CONTEXT.md) | Fork Android, armazenamento offline e modelo de contas/dispositivos |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | TDD obrigatório, ambiente, comandos, testes e definição de pronto |
@@ -35,6 +36,8 @@ O usuário confirmou o fork Kover em ../kover e o primeiro tablet Samsung Galaxy
 - Mantenha pendências como pendências. Não transforme planos em capacidades existentes sem código e validação.
 
 ## Estado inicial
+
+O estado atual está em [STATUS.md](STATUS.md); as seções abaixo são o histórico do início do fork.
 
 Apenas documentação foi adicionada nesta tarefa. Não há servidor implantado, tablet configurado ou funcionalidade do Kover alterada por estes documentos. O runtime de comandos encontrou Node 24.11.0, mas não encontrou SDK .NET compatível disponível para executar build/test. Não foram executadas suítes de aplicação nesta etapa documental.
 
