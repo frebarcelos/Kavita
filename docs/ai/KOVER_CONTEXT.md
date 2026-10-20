@@ -80,6 +80,23 @@ fvm flutter build apk --debug
 
 Os comandos descrevem o fluxo completo. Nesta implementação, dependências/codegen, os 70 testes de DAOs/repositórios e a análise dos quatro arquivos de código/testes alterados foram executados; build e instalação de APK permanecem pendentes. Gerar código pode atualizar arquivos: revisar diff e não sobrescrever trabalho existente. A CI também valida schema com drift_dev make-migrations; mudanças de banco devem incluir migrações e testes. Conferir SDK Android/JDK e dispositivo com flutter doctor/devices antes de instalar APK.
 
+## Build e instalação atuais (desde 2026-10-20)
+
+Use `..\kover\tool\build_apk.ps1`, não o `flutter build` direto. O script:
+
+- grava o `git describe` do build, que aparece em Configurações;
+- embute a raiz HTTPS do servidor de casa, se existir `C:\KavitaBackups\https\root.crt` (item 5.5);
+- no `-Mode release` (ou `profile`), assina com `C:\KavitaBackups\kover-keystore`, uma cópia da chave debug (SHA-256 `9c8f74f3…`), com sufixo `.local`.
+
+```powershell
+..\kover\tool\build_apk.ps1 -Mode release
+adb install -r ..\kover\build\app\outputs\flutter-apk\app-release.apk
+```
+
+O release instala por cima do debug e mantém downloads, progresso e credenciais. É AOT: abre em cerca de 6 s no S6 Lite, contra 15 a 20 s do debug, e não é depurável (`run-as` deixa de funcionar).
+
+Desde 2026-10-20 o tablet usa `https://192.168.1.113:5443`. Perder a pasta da chave impede atualizar sem reinstalar: guarde uma cópia fora do PC.
+
 Cobertura encontrada: DAOs (incluindo download_dao_test), migrações Drift, repositórios de leitura/fontes/bookmarks/séries, autenticação, settings, leitores e utilitários. Não confundir integration_test/screenshots_test.dart com prova do ciclo offline completo.
 
 Prioridades para novos testes: remoção preserva dirty progress e não faz HTTP destrutivo; download concorrente não recria payload; sync reconhece só a revisão enviada; troca de conta não mistura dados; dois tablets da mesma pessoa sincronizam posição sem compartilhar descarte de downloads.
