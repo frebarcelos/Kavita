@@ -1,10 +1,18 @@
 # Contexto: diretório publicado do backend, já com o build da UI em wwwroot.
 # Não usar a raiz do checkout como contexto: ela pode conter dados operacionais.
+# Construir com build-fork-image.ps1, que exige árvore limpa e passa a revisão do fork.
 FROM jvmilazz0/kavita:0.9.1@sha256:31181a32f0dda73cae68721867028a7253d57881b58bea5754cd9e578e75421a
 
+ARG FORK_REVISION=unknown
+ARG FORK_VERSION=unknown
+LABEL org.opencontainers.image.revision=$FORK_REVISION \
+      org.opencontainers.image.version=$FORK_VERSION \
+      org.opencontainers.image.source=https://github.com/frebarcelos/Kavita
+
 # Esta remoção ocorre apenas na camada da imagem, antes de montar qualquer volume.
-# Evita servir assets comprimidos antigos junto da interface nova.
-RUN rm -rf /kavita/wwwroot
+# Só o publish do fork fica em /kavita: arquivos da 0.9.1 que saíram do publish não podem continuar sendo carregados.
+# config/ é o ponto de montagem do volume e guarda a semente de configuração do upstream.
+RUN find /kavita -mindepth 1 -maxdepth 1 ! -name config -exec rm -rf {} +
 COPY . /kavita/
 RUN chmod +x /kavita/Kavita.Server
 ENTRYPOINT ["/kavita/Kavita.Server"]

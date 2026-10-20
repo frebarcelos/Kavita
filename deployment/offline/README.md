@@ -134,6 +134,28 @@ docker build --file deployment/offline/Dockerfile.fork --tag kavita-folders-main
 
 Execute a partir da raiz do checkout. O contexto deve conter apenas os artefatos publicados, sem bancos, credenciais ou configurações pessoais; não substitua esse caminho pela raiz do repositório. Construir a imagem não altera os containers existentes.
 
-O override local `compose.libraries.yaml` contém, desde a aplicação do modelo YACReader em 2026-10-19, a imagem `kavita-folders-yac:20261019` (publicada em `_temp/offline-f1/yac/server`) e o volume externo `kavita-folders-main-active-20261019-r3`; o r2 anterior é o ponto de rollback. Ele também mantém as fontes somente leitura. Continue usando os **dois arquivos Compose** nos comandos da instância pessoal. O volume operacional anterior e os checkpoints foram preservados; não apagar nem restaurar sobre o ativo automaticamente, pois novas leituras podem ter ocorrido.
+O override local `compose.libraries.yaml` aponta a imagem em uso e o volume externo `kavita-folders-main-active-20261019-r3`, e mantém as fontes somente leitura. Continue usando os **dois arquivos Compose** nos comandos da instância pessoal. O volume r2 e as imagens antigas foram removidos na limpeza de 2026-10-19, com autorização; o rollback passa a ser o checkpoint do último deploy (abaixo). Nunca restaurar sobre o volume ativo automaticamente, pois novas leituras podem ter ocorrido.
+
+### Build e deploy a partir de um commit (desde a v1.1)
+
+Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois scripts versionados. Execute a partir da raiz do checkout.
+
+1. **Build:** `./deployment/offline/build-fork-image.ps1`.
+   - Recusa árvore com alterações.
+   - Publica o backend no container do SDK .NET e faz o build de produção da interface.
+   - Gera `kavita-fork:<git describe>` com o SHA do commit em `org.opencontainers.image.revision`.
+   - O [Dockerfile.fork](Dockerfile.fork) apaga os arquivos da 0.9.1 em `/kavita` (exceto `config/`) antes de copiar o publish do fork.
+2. **Deploy:** `./deployment/offline/deploy-fork.ps1 -Image kavita-fork:<versão>`. O script:
+   - recusa rodar com menos de 5 GB livres;
+   - valida o Compose novo, que precisa manter a imagem, o volume ativo e o IP da LAN;
+   - para o servidor;
+   - copia o volume de configuração **sem `cache/` e `temp/`** para um checkpoint identificado pelo label `kavita.fork.checkpoint`, e gera `config.tar.gz` em `_temp/offline-f1/deploys/<data>`;
+   - sobe a imagem nova e espera o health check.
+   - Se a imagem não ficar saudável, devolve o override anterior e sobe a imagem anterior.
+   - Mantém os 2 checkpoints mais recentes, decisão do usuário. Só apaga volumes com o label do script; os checkpoints antigos sem label não são tocados.
+3. **Testes do deploy:** `./deployment/offline/tests/deploy-fork.tests.ps1 -ImageA <imagem> -ImageB <outra>`.
+   - Roda num projeto descartável em `127.0.0.1:5057`, com volume e biblioteca próprios, e remove tudo no fim.
+   - Cobre recusa sem espaço, sucesso sem o cache, imagem quebrada com volta automática e retenção de 2.
+   - Execute sem redirecionar stderr (`2>&1`): no Windows PowerShell isso transforma o progresso do Docker em erro.
 
 A pausa de clientes usa `FolderOrganization.ApiKeyMaintenance` em `config/appsettings.Production.json` no volume operacional. O valor atual é **false**, após validação e autorização explícita do usuário. O host não carrega os providers de ambiente padrão; uma variável de ambiente com esse nome não basta. Não alterar esse controle para contornar reconciliação recusada em instalações com dados reais: payloads antigos divididos ainda exigem tratamento próprio. O navegador usa JWT.
