@@ -29,7 +29,7 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 1.6 | Feito: a leitura mais recente vence (servidor) e hora em UTC (Kover) | Kavita `1e3f299`; Kover `e8eb9d4` |
 | 1.7 | Feito: uma gravação a cada 300 ms por usuário e capítulo | Kavita `528fbc3` |
 | 1.8 | Feito: leitor web grava depois de 500 ms na página | Kavita `c3c31ba` |
-| 2.x | Feito no Kover: novas tentativas, cancelamento sem regravar, falha visível, selos por estado, checagem de espaço e serviço em primeiro plano. **Falta instalar o APK no tablet** | Kover `8760436`, `59e4298`, `d2f5924`, `9a05513`, `e05612f`; 397 testes |
+| 2.x | Feito no Kover: novas tentativas, cancelamento sem regravar, falha visível, selos por estado, checagem de espaço e serviço em primeiro plano. Aceite no S6 Lite em 2026-10-20: selos na tela inicial; download concluído com o app em segundo plano e o serviço parando sozinho; pedido da permissão de notificação e notificação publicada; remover a cópia manteve o "Continuar lendo" | Kover `8760436`, `59e4298`, `d2f5924`, `9a05513`, `e05612f`, `4a7ea0e`; 397 testes |
 | 4.1–4.3 | Feito: pasta ou arquivo renomeado e biblioteca montada em outro caminho mantêm série, capítulos, progresso e capa. Cópia ou caso ambíguo vira série nova | Kavita `0b7aeae`, `ff4d1f5` |
 | 4.4 | Feito: capas de pasta acompanham a troca de raízes da biblioteca | Kavita `f219a9e` |
 | 4.5 | Conferido: já tratado no código | — |
