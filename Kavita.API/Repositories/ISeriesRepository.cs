@@ -132,6 +132,8 @@ public interface ISeriesRepository
     Task<IList<SeriesFolderFiles>> GetFolderSeriesFilesAsync(int libraryId, CancellationToken ct = default);
     /// <summary>Fork: folder covers follow a folder renamed or moved on disk (absolute folders)</summary>
     Task MoveFolderCoversAsync(int libraryId, string oldFolder, string newFolder, CancellationToken ct = default);
+    /// <summary>Fork: folder covers keep their folder when the library roots change (the tree prefixes roots when there are several)</summary>
+    Task RebaseFolderCoversAsync(int libraryId, IList<string> oldRoots, IList<string> newRoots, CancellationToken ct = default);
     Task<AgeRating> GetMaxAgeRatingFromSeriesAsyncAsync(IEnumerable<int> seriesIds, CancellationToken ct = default);
     Task<IList<SeriesMetadataDto>> GetSeriesMetadataForIdsAsync(IEnumerable<int> seriesIds, CancellationToken ct = default);
     Task<IList<Series>> GetAllWithCoversInDifferentEncodingAsync(EncodeFormat encodeFormat, bool customOnly = true, CancellationToken ct = default);

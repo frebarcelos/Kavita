@@ -1883,6 +1883,36 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
         static string TrimFolder(string path) => path.Replace('\\', '/').TrimEnd('/');
     }
 
+    public async Task RebaseFolderCoversAsync(int libraryId, IList<string> oldRoots, IList<string> newRoots, CancellationToken ct = default)
+    {
+        var from = oldRoots.Select(NormalizeFolder).ToList();
+        var to = newRoots.Select(NormalizeFolder).ToList();
+        var covers = await context.FolderCover.Where(c => c.LibraryId == libraryId).ToListAsync(ct);
+        foreach (var cover in covers)
+        {
+            var absolute = AbsoluteFolder(from, cover.Path);
+            var relative = absolute == null ? null : RelativeFolder(to, absolute);
+            // A cover of a root that was removed keeps its path, in case the root comes back
+            if (relative != null) cover.Path = relative;
+        }
+    }
+
+    private static string NormalizeFolder(string path) => path.Replace('\\', '/').TrimEnd('/');
+
+    /// <summary>The absolute folder of a path of the folder tree; null when its root is not one of the roots</summary>
+    private static string? AbsoluteFolder(IList<string> roots, string relative)
+    {
+        if (roots.Count == 0) return null;
+        if (roots.Count == 1) return relative.Length == 0 ? roots[0] : $"{roots[0]}/{relative}";
+
+        var slash = relative.IndexOf('/');
+        var rootName = slash < 0 ? relative : relative[..slash];
+        var rest = slash < 0 ? string.Empty : relative[(slash + 1)..];
+        var root = roots.FirstOrDefault(r => r[(r.LastIndexOf('/') + 1)..] == rootName);
+        if (root == null) return null;
+        return rest.Length == 0 ? root : $"{root}/{rest}";
+    }
+
     /// <summary>A folder relative to the library root, as the folder tree shows it; null outside every root</summary>
     private static string? RelativeFolder(IList<string> roots, string folder)
     {

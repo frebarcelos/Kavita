@@ -33,6 +33,32 @@ public class FolderCoverRepositoryTests(ITestOutputHelper outputHelper) : Abstra
     }
 
     [Fact]
+    public async Task FolderCovers_FollowTheTreeWhenASecondRootIsAddedAndRemoved()
+    {
+        var (unitOfWork, context, _) = await CreateDatabase();
+        var library = new LibraryBuilder("Quadrinhos").Build();
+        context.Library.Add(library);
+        await context.SaveChangesAsync();
+        unitOfWork.LibraryRepository.Add(new FolderCover { LibraryId = library.Id, Path = "Elric", CoverImage = "a.webp" });
+        unitOfWork.LibraryRepository.Add(new FolderCover { LibraryId = library.Id, Path = "", CoverImage = "b.webp" });
+        await unitOfWork.CommitAsync();
+
+        // With two roots the tree shows each root by name first
+        await unitOfWork.SeriesRepository.RebaseFolderCoversAsync(library.Id, ["/libraries/comics"],
+            ["/libraries/comics", "/libraries/more"]);
+        await unitOfWork.CommitAsync();
+        Assert.Equal(new[] { "comics", "comics/Elric" }, await CoverPaths(context, library.Id));
+
+        await unitOfWork.SeriesRepository.RebaseFolderCoversAsync(library.Id, ["/libraries/comics", "/libraries/more"],
+            ["/libraries/comics"]);
+        await unitOfWork.CommitAsync();
+        Assert.Equal(new[] { "", "Elric" }, await CoverPaths(context, library.Id));
+    }
+
+    private static Task<string[]> CoverPaths(DataContext context, int libraryId) =>
+        context.FolderCover.Where(c => c.LibraryId == libraryId).Select(c => c.Path).OrderBy(p => p).ToArrayAsync();
+
+    [Fact]
     public async Task FolderCovers_GoAwayWithTheirLibrary()
     {
         var (unitOfWork, context, _) = await CreateDatabase();

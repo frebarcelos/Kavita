@@ -690,8 +690,12 @@ public class LibraryController(
 
         var originalFoldersCount = library.Folders.Count;
 
+        var oldRoots = library.Folders.Select(f => f.Path).ToList();
         library.Name = newName;
         library.Folders = dto.Folders.Select(s => new FolderPath() {Path = s}).Distinct().ToList();
+        // Fork: folder covers keep their folder when roots are added or removed
+        await unitOfWork.SeriesRepository.RebaseFolderCoversAsync(library.Id, oldRoots,
+            library.Folders.Select(f => f.Path).ToList(), ct);
 
         var typeUpdate = library.Type != dto.Type;
         var folderWatchingUpdate = library.FolderWatching != dto.FolderWatching;
