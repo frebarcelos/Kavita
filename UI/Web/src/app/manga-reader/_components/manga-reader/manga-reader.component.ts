@@ -98,6 +98,9 @@ import {
   SettingSelectComponent
 } from "../../../settings/_components/setting-enum-select/setting-select.component";
 import {PublicationStatus} from "../../../_models/metadata/publication-status";
+import {BookRendererComponent} from "../book-renderer/book-renderer.component";
+import {bookShape, isBookModeActive, readBookMode, saveBookMode} from "../book-renderer/book-mode";
+import {typicalPageRatio} from "../book-renderer/book-pages";
 
 
 const PREFETCH_PAGES = 10;
@@ -188,7 +191,8 @@ function toFormModel(readingProfile: ReadingProfile, mangaReaderService: MangaRe
   imports: [NgStyle, LoadingComponent, SwipeDirective, CanvasRendererComponent, SingleRendererComponent,
     DoubleRendererComponent, DoubleReverseRendererComponent, DoubleNoCoverRendererComponent, InfiniteScrollerComponent,
     NgxSliderModule, FormRoot, FormField, SettingSelectComponent, FittingIconPipe, ReaderModeIconPipe,
-    FullscreenIconPipe, TranslocoDirective, PercentPipe, NgClass, AsyncPipe, DblClickDirective, NgbTooltip]
+    FullscreenIconPipe, TranslocoDirective, PercentPipe, NgClass, AsyncPipe, DblClickDirective, NgbTooltip,
+    BookRendererComponent]
 })
 export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
@@ -368,6 +372,14 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   isReaderModeWebtoon = computed(() => this.readerMode() === ReaderMode.Webtoon);
   isReaderUpDown = computed(() => this.readerMode() === ReaderMode.UpDown);
   isReaderLeftRight = computed(() => this.readerMode() === ReaderMode.LeftRight);
+  /**
+   * Pages turn like paper. The usual renderers stay mounted but hidden, as paging still asks them how far to move
+   */
+  bookMode = signal(readBookMode());
+  bookModeActive = computed(() => isBookModeActive(this.bookMode(), this.readerMode()));
+  bookShapeNow = computed(() => bookShape(this.effectiveLayoutMode(), this.readingDirection()));
+  isWidePage = (page: number) => this.mangaReaderService.isWidePage(page);
+  bookPageRatio = computed(() => typicalPageRatio(this.chapterInfo()?.pageDimensions ?? []));
 
   isReadingDirectionLeftToRight = computed(() => this.readingDirection() === ReadingDirection.LeftToRight);
 
@@ -1900,6 +1912,20 @@ export class MangaReaderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // This is menu only code
+  toggleBookMode() {
+    this.bookMode.set(!this.bookMode());
+    saveBookMode(this.bookMode());
+  }
+
+  /**
+   * A page turned by hand in the book
+   */
+  onBookPageChange(page: number) {
+    this.pagingDirectionSubject.next(page > this.pageNum() ? PAGING_DIRECTION.FORWARD : PAGING_DIRECTION.BACKWARDS);
+    this.setPageNum(page);
+    this.render();
+  }
+
   toggleReaderMode() {
     switch(this.readerMode()) {
       case ReaderMode.LeftRight:

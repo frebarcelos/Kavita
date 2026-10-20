@@ -3554,6 +3554,8 @@
         "right-to-left-alt": "Right to Left",
         "reading-direction-tooltip": "Reading Direction: ",
         "reading-mode-tooltip": "Reading Mode",
+        "book-mode-on": "Turn pages like a book",
+        "book-mode-off": "Stop turning pages like a book",
         "collapse": "Collapse",
         "fullscreen": "Fullscreen",
         "settings-tooltip": "Settings",

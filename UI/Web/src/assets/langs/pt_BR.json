@@ -1515,6 +1515,8 @@
         "right-to-left-alt": "Direita para Esquerda",
         "reading-direction-tooltip": "Direção de Leitura: ",
         "reading-mode-tooltip": "Modo de Leitura",
+        "book-mode-on": "Virar as páginas como um livro",
+        "book-mode-off": "Parar de virar as páginas como um livro",
         "collapse": "Recolher",
         "fullscreen": "Tela Cheia",
         "settings-tooltip": "Configurações",
