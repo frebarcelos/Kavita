@@ -5165,6 +5165,38 @@
         }
       }
     },
+    "/api/Image/folder-cover": {
+      "get": {
+        "tags": [
+          "Image"
+        ],
+        "summary": "Returns the cover chosen by the user for a folder of the library's folder tree",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Folder relative to the library root; looked up in the catalog, never on disk",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Image/volume-cover": {
       "get": {
         "tags": [
@@ -6313,6 +6345,105 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/JumpKeyDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Library/folder-series": {
+      "get": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "The library's series the user may see, each with its folder relative to the library root, to browse it as a\nfolder tree. Paths are never absolute.",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderSeriesDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderSeriesDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderSeriesDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Library/folder-covers": {
+      "get": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "The folders of the library that have a cover chosen by the user",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderCoverDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderCoverDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderCoverDto"
                   }
                 }
               }
@@ -21061,6 +21192,38 @@
         }
       }
     },
+    "/api/Upload/folder-cover": {
+      "post": {
+        "tags": [
+          "Upload"
+        ],
+        "summary": "Returns true when the request carries a new cover source (a staged temp file or a base64 payload).\nWhen false, the caller is resetting/clearing the cover.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFolderCoverDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFolderCoverDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadFolderCoverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Upload/chapter": {
       "post": {
         "tags": [
@@ -25909,6 +26072,34 @@
           "Annotation"
         ]
       },
+      "FolderCoverDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastModifiedUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "FolderSeriesDto": {
+        "type": "object",
+        "properties": {
+          "seriesId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "path": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "FontDeleteResultDto": {
         "type": "object",
         "properties": {
@@ -27323,6 +27514,9 @@
             "type": "boolean"
           },
           "enableMetadata": {
+            "type": "boolean"
+          },
+          "folderBasedOrganization": {
             "type": "boolean"
           },
           "removePrefixForSortName": {
@@ -34182,6 +34376,10 @@
           "enableMetadata": {
             "type": "boolean"
           },
+          "folderBasedOrganization": {
+            "type": "boolean",
+            "nullable": true
+          },
           "removePrefixForSortName": {
             "type": "boolean"
           },
@@ -35072,6 +35270,32 @@
         },
         "additionalProperties": false
       },
+      "UploadFolderCoverDto": {
+        "required": [
+          "libraryId",
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "path": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "UploadUrlDto": {
         "required": [
           "url"
@@ -35217,6 +35441,10 @@
           },
           "collapseSeriesRelationships": {
             "type": "boolean"
+          },
+          "browseLibrariesByFolder": {
+            "type": "boolean",
+            "nullable": true
           },
           "locale": {
             "minLength": 1,
