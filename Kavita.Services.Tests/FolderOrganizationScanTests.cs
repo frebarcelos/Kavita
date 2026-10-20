@@ -388,6 +388,30 @@ public class FolderOrganizationScanTests(ITestOutputHelper output) : AbstractDbT
     }
 
     [Fact]
+    public async Task Scan_NewFileInAKnownFolder_IsFoundWithoutForcing_AndKeepsTheOtherChapters()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        var library = await helper.GenerateScannerData("New File - Manga",
+            ["Series/Alpha v01.cbz"], Sized("Alpha v01.cbz"));
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var progress = await ReadOn(context, library.Id, "Alpha v01.cbz");
+
+        // What the scheduled task does after a file is copied into the folder on the PC
+        await helper.UpdateTestData("New File - Manga", ["Series/Alpha v01.cbz", "Series/Alpha v02.cbz"],
+            Sized("Alpha v01.cbz", "Alpha v02.cbz"));
+        await scanner.ScanLibrary(library.Id, forceUpdate: false);
+
+        Assert.Equal(2, await context.Chapter.CountAsync(c => c.Volume.Series.LibraryId == library.Id));
+        Assert.Equal(1, await context.Series.CountAsync(s => s.LibraryId == library.Id));
+        var file = await context.MangaFile.SingleAsync(f => f.FilePath.EndsWith("Alpha v01.cbz"));
+        Assert.Equal(progress.ChapterId, file.ChapterId);
+    }
+
+    [Fact]
     public async Task Scan_RenamedFilesOfTheSameSize_AreNotGuessed()
     {
         var (uow, context, _) = await CreateDatabase();
@@ -425,14 +449,22 @@ public class FolderOrganizationScanTests(ITestOutputHelper output) : AbstractDbT
         // The same folders, mounted at another path in the container
         var root = await context.FolderPath.SingleAsync(f => f.LibraryId == library.Id);
         var moved = root.Path.TrimEnd('/', '\\') + " remounted";
+        if (Directory.Exists(moved)) Directory.Delete(moved, true);
         Directory.Move(root.Path, moved);
-        root.Path = moved;
-        await context.SaveChangesAsync();
-        await scanner.ScanLibrary(library.Id, true);
+        try
+        {
+            root.Path = moved;
+            await context.SaveChangesAsync();
+            await scanner.ScanLibrary(library.Id, true);
 
-        var after = (await Placements(context, library.Id)).ToDictionary(p => Path.GetFileName(p.Key), p => p.Value);
-        Assert.Equal(before, after);
-        Assert.Equal(2, await context.Series.CountAsync(s => s.LibraryId == library.Id));
+            var after = (await Placements(context, library.Id)).ToDictionary(p => Path.GetFileName(p.Key), p => p.Value);
+            Assert.Equal(before, after);
+            Assert.Equal(2, await context.Series.CountAsync(s => s.LibraryId == library.Id));
+        }
+        finally
+        {
+            Directory.Delete(moved, true);
+        }
     }
 
     [Fact]

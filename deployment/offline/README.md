@@ -172,4 +172,12 @@ Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois script
   - `./deployment/offline/tests/backup-retention.tests.ps1`, sem Docker;
   - `./deployment/offline/tests/backup-config.tests.ps1 -Image <imagem>`: backup e restauração num servidor descartável em `127.0.0.1`.
 
+### Arquivos novos no PC (item 4.9)
+
+O watcher de pastas do Kavita **não recebe eventos** do bind mount do Windows no Docker Desktop. Teste de 2026-10-20: `inotifywait` num mount somente leitura terminou por tempo esgotado (exit 2) depois da criação de um arquivo no Windows. A data de modificação da pasta, porém, chega ao container (`stat` mostrou a pasta atualizada), e o scan incremental se baseia nela.
+
+- **Automático:** em Admin → Tarefas, troque "Escanear Biblioteca" para personalizado com `0 * * * *` (a cada hora). O scan agendado é incremental, não forçado, e só reprocessa pastas alteradas. Ele só lê a biblioteca, que continua montada somente leitura.
+- **Na hora:** no menu da biblioteca, use "Varrer Biblioteca", ou o menu da série, para uma só pasta.
+- **Não use** "Forçar Escaneamento" para isso. A reindexação forçada segue as regras do AGENTS.md.
+
 A pausa de clientes usa `FolderOrganization.ApiKeyMaintenance` em `config/appsettings.Production.json` no volume operacional. O valor atual é **false**, após validação e autorização explícita do usuário. O host não carrega os providers de ambiente padrão; uma variável de ambiente com esse nome não basta. Não alterar esse controle para contornar reconciliação recusada em instalações com dados reais: payloads antigos divididos ainda exigem tratamento próprio. O navegador usa JWT.

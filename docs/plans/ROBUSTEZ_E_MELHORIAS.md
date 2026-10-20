@@ -29,6 +29,12 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 1.6 | Feito: a leitura mais recente vence (servidor) e hora em UTC (Kover) | Kavita `1e3f299`; Kover `e8eb9d4` |
 | 1.7 | Feito: uma gravação a cada 300 ms por usuário e capítulo | Kavita `528fbc3` |
 | 1.8 | Feito: leitor web grava depois de 500 ms na página | Kavita `c3c31ba` |
+| 2.x | Feito no Kover: novas tentativas, cancelamento sem regravar, falha visível, selos por estado, checagem de espaço e serviço em primeiro plano. **Falta instalar o APK no tablet** | Kover `8760436`, `59e4298`, `d2f5924`, `9a05513`, `e05612f`; 397 testes |
+| 4.1–4.3 | Feito: pasta ou arquivo renomeado e biblioteca montada em outro caminho mantêm série, capítulos, progresso e capa. Cópia ou caso ambíguo vira série nova | Kavita `0b7aeae`, `ff4d1f5` |
+| 4.4 | Feito: capas de pasta acompanham a troca de raízes da biblioteca | Kavita `f219a9e` |
+| 4.5 | Conferido: já tratado no código | — |
+| 4.6, 4.7 | Feito: capa de pasta removida apaga o arquivo; referências deixadas por scan interrompido são reparadas | Kavita `be05b67`, `4df68e1` |
+| 4.9 | Testado: o watcher não recebe eventos do mount do Windows, mas a data da pasta chega. Solução: scan agendado incremental a cada hora, procedimento no guia de implantação | `deployment/offline/README.md`; teste `Scan_NewFileInAKnownFolder_IsFoundWithoutForcing_AndKeepsTheOtherChapters` |
 
 Imagem do servidor com tudo acima: `kavita-fork:fork-v1.1-5-g528fbc3e7`. Suítes: serviços 3.032 aprovados (sem falhas), servidor 110/110, web 78/78, Kover 370/370 e `flutter analyze` limpo.
 
