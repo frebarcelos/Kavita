@@ -4,7 +4,9 @@ param(
     # Where the backend is published and the web build copied; reused between builds of the same commit
     [string]$OutputRoot = '_temp/offline-f1/build'
 )
-$ErrorActionPreference = 'Stop'
+# Native tools (npm, ng, docker) write progress and warnings to stderr; each one is checked by its exit code instead,
+# so a redirected run does not stop on a warning
+$ErrorActionPreference = 'Continue'
 # Builds the server image from a clean checkout of the fork, so a running image can always be traced to a commit.
 # Run from the repository root. Needs Docker Desktop and the Node used by the web build.
 
@@ -27,14 +29,15 @@ if (-not (Test-Path (Join-Path $server 'Kavita.Server'))) {
 Push-Location UI/Web
 try {
     npm exec --yes --package=node@24.15.0 -- node hash-localization.js
+    if ($LASTEXITCODE -ne 0) { throw 'Localization hashing failed.' }
     npm exec --yes --package=node@24.15.0 -- node node_modules/@angular/cli/bin/ng.js build --configuration production
     if ($LASTEXITCODE -ne 0) { throw 'Web build failed.' }
 } finally {
     Pop-Location
 }
 $wwwroot = Join-Path $server 'wwwroot'
-if (Test-Path $wwwroot) { Remove-Item -Recurse -Force $wwwroot }
-Copy-Item -Recurse UI/Web/dist/browser $wwwroot
+if (Test-Path $wwwroot) { Remove-Item -Recurse -Force $wwwroot -ErrorAction Stop }
+Copy-Item -Recurse UI/Web/dist/browser $wwwroot -ErrorAction Stop
 
 docker build --file deployment/offline/Dockerfile.fork --build-arg "FORK_REVISION=$revision" --build-arg "FORK_VERSION=$version" --tag $tag $server
 if ($LASTEXITCODE -ne 0) { throw 'Image build failed.' }

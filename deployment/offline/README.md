@@ -158,4 +158,18 @@ Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois script
    - Cobre recusa sem espaço, sucesso sem o cache, imagem quebrada com volta automática e retenção de 2.
    - Execute sem redirecionar stderr (`2>&1`): no Windows PowerShell isso transforma o progresso do Docker em erro.
 
+### Backup automático (desde a v1.1)
+
+- **Backup:** `./deployment/offline/backup-config.ps1` copia do servidor em execução, sem pará-lo:
+  - o `kavita.db`, pelo backup online do SQLite, conferido com `integrity_check`;
+  - as capas (`covers/`) e os `appsettings*.json`.
+
+  O cache fica de fora. O destino padrão é `C:\KavitaBackups` (decisão do usuário: uma pasta do PC fora do Docker e do repositório), com `kavita-config-<data>.tar.gz` e `.sha256`. A retenção mantém o mais novo de cada um dos últimos 7 dias e de cada uma das 4 semanas anteriores.
+- **Atenção:** o arquivo contém os segredos do servidor (configuração e chaves no banco). Mantenha a pasta privada e não a versione.
+- **Agendamento:** `./deployment/offline/install-backup-task.ps1` registra a tarefa "Kavita - backup" na conta do usuário, diária às 03:00. Se o PC estiver desligado no horário, ela roda assim que possível. O log fica em `C:\KavitaBackups\backup.log`. Use `-WhatIf` para ver a tarefa sem registrar.
+- **Restauração:** extraia o arquivo num volume **novo** e suba um container de teste em `127.0.0.1` antes de trocar o volume do principal. Nunca restaure sobre o volume ativo.
+- **Testes:**
+  - `./deployment/offline/tests/backup-retention.tests.ps1`, sem Docker;
+  - `./deployment/offline/tests/backup-config.tests.ps1 -Image <imagem>`: backup e restauração num servidor descartável em `127.0.0.1`.
+
 A pausa de clientes usa `FolderOrganization.ApiKeyMaintenance` em `config/appsettings.Production.json` no volume operacional. O valor atual é **false**, após validação e autorização explícita do usuário. O host não carrega os providers de ambiente padrão; uma variável de ambiente com esse nome não basta. Não alterar esse controle para contornar reconciliação recusada em instalações com dados reais: payloads antigos divididos ainda exigem tratamento próprio. O navegador usa JWT.
