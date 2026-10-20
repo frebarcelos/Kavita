@@ -227,6 +227,18 @@ public class ReaderService(IUnitOfWork unitOfWork, ILogger<ReaderService> logger
 
             // Don't create an empty progress record if there isn't any progress. This prevents Last Read date from being updated when opening a chapter
             if (userProgress == null && progressDto.PageNum == 0) return true;
+
+            // Fork: the most recent reading wins. A device that read offline sends, later, when it read; a reading
+            // older than the saved one is not applied, and the device then fetches the newer progress. Clients
+            // that do not send a reading time (the web reader) save as they read. A time without zone is taken
+            // as the server's zone, the same as the tablets'.
+            if (userProgress != null && progressDto.LastModifiedUtc != default &&
+                progressDto.LastModifiedUtc.ToUniversalTime() < userProgress.LastModifiedUtc)
+            {
+                logger.LogDebug("Kept newer progress on Chapter {ChapterId}: page {Saved} saved at {SavedAt}, page {Sent} read at {SentAt}",
+                    progressDto.ChapterId, userProgress.PagesRead, userProgress.LastModifiedUtc, progressDto.PageNum, progressDto.LastModifiedUtc);
+                return true;
+            }
             if (oldProgress == progressDto.PageNum && userProgress?.BookScrollId == progressDto.BookScrollId) return true;
 
             logger.LogDebug("Saving Progress on Series {SeriesId}, Chapter {ChapterId} to Page {PageNum}", progressDto.SeriesId, progressDto.ChapterId, progressDto.PageNum);

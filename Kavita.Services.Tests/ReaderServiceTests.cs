@@ -196,6 +196,72 @@ public class ReaderServiceTests(ITestOutputHelper testOutputHelper) : AbstractDb
 
     }
 
+    /// <summary>
+    /// A chapter of 10 pages with progress saved on page 5, as the PC would leave it
+    /// </summary>
+    private async Task<(IUnitOfWork, ReaderService)> SetupSavedProgressOnPageFive()
+    {
+        var (unitOfWork, context, _) = await CreateDatabase();
+        var readerService = Setup(unitOfWork);
+        var library = new LibraryBuilder("Test Lib", LibraryType.Manga).Build();
+        context.Library.Add(library);
+        await context.SaveChangesAsync();
+        context.Series.Add(new SeriesBuilder("Test")
+            .WithLibraryId(library.Id)
+            .WithVolume(new VolumeBuilder(Parser.LooseLeafVolume)
+                .WithChapter(new ChapterBuilder(Parser.DefaultChapter).WithPages(10).Build())
+                .Build())
+            .Build());
+        context.AppUser.Add(new AppUser { UserName = "reader", Libraries = [library] });
+        await context.SaveChangesAsync();
+
+        JobStorage.Current = new InMemoryStorage();
+        Assert.True(await readerService.SaveReadingProgress(
+            new ProgressDto { ChapterId = 1, PageNum = 5, SeriesId = 1, VolumeId = 1, LibraryId = 1 }, 1));
+        return (unitOfWork, readerService);
+    }
+
+    [Fact]
+    public async Task SaveReadingProgress_KeepsNewerSavedProgress_WhenClientReadEarlier()
+    {
+        var (unitOfWork, readerService) = await SetupSavedProgressOnPageFive();
+
+        // A tablet sends, later, page 2 read offline an hour ago: the newer reading on page 5 wins
+        Assert.True(await readerService.SaveReadingProgress(new ProgressDto
+        {
+            ChapterId = 1, PageNum = 2, SeriesId = 1, VolumeId = 1, LibraryId = 1,
+            LastModifiedUtc = DateTime.UtcNow.AddHours(-1),
+        }, 1));
+
+        Assert.Equal(5, (await unitOfWork.AppUserProgressRepository.GetUserProgressAsync(1, 1))!.PagesRead);
+    }
+
+    [Fact]
+    public async Task SaveReadingProgress_AppliesClientProgress_ReadAfterTheSavedOne()
+    {
+        var (unitOfWork, readerService) = await SetupSavedProgressOnPageFive();
+
+        Assert.True(await readerService.SaveReadingProgress(new ProgressDto
+        {
+            ChapterId = 1, PageNum = 8, SeriesId = 1, VolumeId = 1, LibraryId = 1,
+            LastModifiedUtc = DateTime.UtcNow.AddSeconds(5),
+        }, 1));
+
+        Assert.Equal(8, (await unitOfWork.AppUserProgressRepository.GetUserProgressAsync(1, 1))!.PagesRead);
+    }
+
+    [Fact]
+    public async Task SaveReadingProgress_ClientsWithoutReadingTime_AlwaysSave()
+    {
+        var (unitOfWork, readerService) = await SetupSavedProgressOnPageFive();
+
+        // The web reader does not send when it read: it saves as it reads
+        Assert.True(await readerService.SaveReadingProgress(
+            new ProgressDto { ChapterId = 1, PageNum = 2, SeriesId = 1, VolumeId = 1, LibraryId = 1 }, 1));
+
+        Assert.Equal(2, (await unitOfWork.AppUserProgressRepository.GetUserProgressAsync(1, 1))!.PagesRead);
+    }
+
 
     #endregion
 
