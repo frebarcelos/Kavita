@@ -19,7 +19,7 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | --- | --- | --- |
 | 0.1 | Feito: modo "Livro" commitado, tag `fork-v1.1` | Kavita `c05402e`…`35046be` |
 | 0.2 | Feito: `build-fork-image.ps1` exige árvore limpa e grava o SHA no label | Kavita `3951477` |
-| 0.3 | Feito no código: backup consistente, retenção 7+4, agendamento. **Falta o usuário registrar a tarefa** e o primeiro teste de restauração com dados reais | Kavita `3c6a08a`; testes de retenção (7) e de backup/restauração (10) |
+| 0.3 | Feito e validado em 2026-10-20: tarefa registrada pelo usuário; a primeira execução gerou 276 MB com `integrity_check` ok e hash conferido. Restauração num volume novo: mesmas contas (2), progresso (19), coleções (24) e capas de pasta (5) do principal, 940 capas, e servidor descartável em `127.0.0.1` saudável. Volume e container do teste apagados. Repetir a restauração todo mês | Kavita `3c6a08a`; testes de retenção (7) e de backup/restauração (10) |
 | 0.4, 5.1 | Feito: `deploy-fork.ps1` com checkpoint sem cache, health, volta automática e 2 checkpoints. **Falta o primeiro uso no principal** | Kavita `3951477`; 17 testes de deploy |
 | 5.2 | Feito: a imagem só contém o publish do fork | `Dockerfile.fork` |
 | 0.6 | Feito: guia de implantação sem o rollback inexistente | `deployment/offline/README.md` |
@@ -36,6 +36,7 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 4.5 | Conferido: já tratado no código | — |
 | 4.6, 4.7 | Feito: capa de pasta removida apaga o arquivo; referências deixadas por scan interrompido são reparadas | Kavita `be05b67`, `4df68e1` |
 | 4.8 | Medido, sem índice: com 20 mil arquivos em 2 mil pastas, o modo por pastas acompanha o upstream e `folder-series` leva 10–16 ms. O tempo está na varredura do disco, não na busca por `FolderPath`. A medição achou o erro corrigido em `df37f33` | `FolderOrganizationScanBenchmark` (tabela abaixo) |
+| 4.10 | Conferido em 2026-10-20: nenhuma das 7 séries auxiliares (IDs 55, 100, 47, 107, 70, 87 e 23) existe no banco do principal, e nenhuma série é feita só de imagens. A migração para pastas (r3) gerou o catálogo sem elas, e os checkpoints antigos que as guardavam já foram apagados. Não há o que apagar | consulta somente leitura ao banco ativo |
 | 4.9 | Testado: o watcher não recebe eventos do mount do Windows, mas a data da pasta chega. Solução: scan agendado incremental a cada hora, procedimento no guia de implantação. Um arquivo novo do mesmo tamanho de outro da pasta era tomado por renomeação; corrigido | `deployment/offline/README.md`; Kavita `df37f33`; teste `Scan_NewFileInAKnownFolder_IsFoundWithoutForcing_AndKeepsTheOtherChapters` |
 
 Medição do 4.8 (2026-10-20, container do SDK com 4 CPUs, SQLite em arquivo temporário, um contexto por série como no servidor; arquivos vazios, sem leitura de páginas):
