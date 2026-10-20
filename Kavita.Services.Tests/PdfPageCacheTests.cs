@@ -27,7 +27,8 @@ public class PdfPageCacheTests : IDisposable
         var directoryService = new DirectoryService(Substitute.For<ILogger<DirectoryService>>(), new FileSystem());
         var bookService = new BookService(Substitute.For<ILogger<BookService>>(), directoryService,
             new ImageService(Substitute.For<ILogger<ImageService>>(), directoryService), Substitute.For<IMediaErrorService>(), _unitOfWork);
-        _cacheService.GetCachePath(Arg.Any<int>()).Returns(call => Path.Join(_cache, call.Arg<int>().ToString()));
+        // As CacheService returns it: the chapter's folder, with a trailing separator
+        _cacheService.GetCachePath(Arg.Any<int>()).Returns(call => Path.Join(_cache, call.Arg<int>() + "/"));
         _pdfPages = new PdfPageCache(_unitOfWork, bookService, _cacheService);
     }
 
@@ -105,5 +106,17 @@ public class PdfPageCacheTests : IDisposable
         Assert.Null(await _pdfPages.GetPagePathAsync(6, 0));
         Assert.Null(await _pdfPages.GetPagePathAsync(7, 0));
         Assert.Null(await _pdfPages.GetPagePathAsync(99, 0));
+    }
+
+    [Fact]
+    public async Task Pages_StayOutOfTheChapterCacheFolder()
+    {
+        // The chapter's folder is flattened and cleared by the full extraction and by the PDF reader
+        ChapterWith(5, Pdf());
+
+        var path = await _pdfPages.GetPagePathAsync(5, 0);
+
+        var chapterFolder = Path.GetFullPath(Path.Join(_cache, "5"));
+        Assert.False(Path.GetFullPath(path!).StartsWith(chapterFolder + Path.DirectorySeparatorChar), path);
     }
 }

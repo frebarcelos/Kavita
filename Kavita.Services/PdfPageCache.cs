@@ -67,6 +67,9 @@ public class PdfPageCache(IUnitOfWork unitOfWork, IBookService bookService, ICac
 
         var file = chapter!.Files.First();
         var version = $"{file.Bytes}-{file.FileLastWriteTimeUtc?.Ticks ?? 0}";
-        return (file, $"{cacheService.GetCachePath(chapterId)}-pdf-pages-{version}");
+        // Beside the chapter's cache folder, not in it: the full extraction flattens that folder and the PDF reader
+        // clears it. The daily cleanup empties the whole cache, this folder included.
+        var chapterFolder = Path.TrimEndingDirectorySeparator(cacheService.GetCachePath(chapterId));
+        return (file, $"{chapterFolder}-pdf-pages-{version}");
     }
 }
