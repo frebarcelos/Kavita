@@ -128,8 +128,8 @@ public interface ISeriesRepository
     Task<IList<SeriesNameMatch>> GetSeriesNameMatchesAsync(int libraryId, CancellationToken ct = default);
     /// <summary>The library's series the user may see, each with its folder relative to the library root</summary>
     Task<IList<FolderSeriesDto>> GetFolderSeriesAsync(int libraryId, int userId, CancellationToken ct = default);
-    /// <summary>Fork: every folder series of the library with its files (path and size)</summary>
-    Task<IList<SeriesFolderFiles>> GetFolderSeriesFilesAsync(int libraryId, CancellationToken ct = default);
+    /// <summary>Fork: the folder series of the library that hold a file of one of the sizes, with all their files (path and size)</summary>
+    Task<IList<SeriesFolderFiles>> GetFolderSeriesFilesAsync(int libraryId, IReadOnlyCollection<long> sizes, CancellationToken ct = default);
     /// <summary>Fork: folder covers follow a folder renamed or moved on disk (absolute folders)</summary>
     Task MoveFolderCoversAsync(int libraryId, string oldFolder, string newFolder, CancellationToken ct = default);
     /// <summary>Fork: folder covers keep their folder when the library roots change (the tree prefixes roots when there are several)</summary>

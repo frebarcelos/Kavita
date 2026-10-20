@@ -1849,10 +1849,15 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
             .AnyAsync(ct);
     }
 
-    public async Task<IList<SeriesFolderFiles>> GetFolderSeriesFilesAsync(int libraryId, CancellationToken ct = default)
+    public async Task<IList<SeriesFolderFiles>> GetFolderSeriesFilesAsync(int libraryId, IReadOnlyCollection<long> sizes,
+        CancellationToken ct = default)
     {
+        var seriesIds = context.MangaFile
+            .Where(f => f.Chapter.Volume.Series.LibraryId == libraryId && f.Chapter.Volume.Series.FolderPath != null &&
+                        sizes.Contains(f.Bytes))
+            .Select(f => f.Chapter.Volume.SeriesId);
         var files = await context.MangaFile
-            .Where(f => f.Chapter.Volume.Series.LibraryId == libraryId && f.Chapter.Volume.Series.FolderPath != null)
+            .Where(f => seriesIds.Contains(f.Chapter.Volume.SeriesId))
             .Select(f => new { f.Chapter.Volume.SeriesId, f.Chapter.Volume.Series.FolderPath, f.FilePath, f.Bytes })
             .AsNoTracking()
             .ToListAsync(ct);

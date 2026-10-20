@@ -410,13 +410,17 @@ public class ProcessSeries(
         var arrived = ArrivedFiles(parsedInfos.Select(p => p.FullFilePath));
         if (arrived.Count == 0) return null;
 
-        var candidates = (await unitOfWork.SeriesRepository.GetFolderSeriesFilesAsync(library.Id))
-            .Where(c => c.FolderPath != firstInfo.FolderKey && c.Files.Count > 0 && !directoryService.Exists(c.FolderPath))
+        // Only series holding a file of an arrived size are read, and the disk is asked last: a first scan adds
+        // every folder as new and must not read the whole library for each one
+        var sizes = arrived.Select(a => a.Bytes).Distinct().ToList();
+        var candidates = (await unitOfWork.SeriesRepository.GetFolderSeriesFilesAsync(library.Id, sizes))
+            .Where(c => c.FolderPath != firstInfo.FolderKey && c.Files.Count > 0)
             .Where(c =>
             {
                 var found = c.Files.Count(f => arrived.Any(a => SameFile(a, f.FilePath, f.Bytes)));
                 return found > 0 && found * 5 >= c.Files.Count * 4;
             })
+            .Where(c => !directoryService.Exists(c.FolderPath))
             .ToList();
         if (candidates.Count != 1) return null;
 
@@ -445,7 +449,11 @@ public class ProcessSeries(
     /// </summary>
     private void RemapRenamedFiles(Series series, IList<ParserInfo> parsedInfos)
     {
-        var seen = parsedInfos.Select(p => p.FullFilePath).ToHashSet();
+        // A folder skipped as unchanged has nothing gone; files kept unread this scan are still there
+        if (parsedInfos.Any(p => !string.IsNullOrEmpty(p.UnchangedFolderPath))) return;
+        var seen = parsedInfos.Where(p => !p.IsPlaceholder).Select(p => p.FullFilePath)
+            .Concat(parsedInfos.SelectMany(p => p.UnchangedFiles).Select(Parser.NormalizePath))
+            .ToHashSet();
         var files = series.Volumes.SelectMany(v => v.Chapters).SelectMany(c => c.Files).ToList();
         var known = files.Select(f => Parser.NormalizePath(f.FilePath)).ToHashSet();
         var gone = files.Where(f => !seen.Contains(Parser.NormalizePath(f.FilePath))).ToList();

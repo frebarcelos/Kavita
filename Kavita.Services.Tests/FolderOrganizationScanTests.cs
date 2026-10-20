@@ -400,14 +400,15 @@ public class FolderOrganizationScanTests(ITestOutputHelper output) : AbstractDbT
         await scanner.ScanLibrary(library.Id);
         var progress = await ReadOn(context, library.Id, "Alpha v01.cbz");
 
-        // What the scheduled task does after a file is copied into the folder on the PC
-        await helper.UpdateTestData("New File - Manga", ["Series/Alpha v01.cbz", "Series/Alpha v02.cbz"],
-            Sized("Alpha v01.cbz", "Alpha v02.cbz"));
+        // What the scheduled task does after a file is copied into the folder on the PC; the old file is untouched.
+        // Same size and extension as the old one, so it must not be taken for a rename of it.
+        var old = (await context.MangaFile.SingleAsync(f => f.FilePath.EndsWith("Alpha v01.cbz"))).FilePath;
+        File.Copy(old, Path.Join(Path.GetDirectoryName(old), "Alpha v02.cbz"));
         await scanner.ScanLibrary(library.Id, forceUpdate: false);
 
         Assert.Equal(2, await context.Chapter.CountAsync(c => c.Volume.Series.LibraryId == library.Id));
         Assert.Equal(1, await context.Series.CountAsync(s => s.LibraryId == library.Id));
-        var file = await context.MangaFile.SingleAsync(f => f.FilePath.EndsWith("Alpha v01.cbz"));
+        var file = await context.MangaFile.AsNoTracking().SingleAsync(f => f.FilePath.EndsWith("Alpha v01.cbz"));
         Assert.Equal(progress.ChapterId, file.ChapterId);
     }
 
