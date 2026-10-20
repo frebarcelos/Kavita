@@ -175,6 +175,34 @@ Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois script
   - `./deployment/offline/tests/backup-retention.tests.ps1`, sem Docker;
   - `./deployment/offline/tests/backup-config.tests.ps1 -Image <imagem>`: backup e restauração num servidor descartável em `127.0.0.1`.
 
+### Saúde depois de reiniciar o PC (itens 5.3, 5.4 e 5.8)
+
+`./deployment/offline/install-health-task.ps1` registra a tarefa "Kavita - saude", na conta do usuário. Ela roda 2 minutos depois do logon e a cada 15 minutos, executando `check-health.ps1`. A tarefa:
+
+- abre o Docker Desktop se ele não estiver rodando. Neste PC ele não inicia com o Windows;
+- inicia o container parado. Isso acontece quando o Docker sobe antes do Wi-Fi e a publicação no IP da LAN falha;
+- reinicia uma vez um container sem saúde;
+- mostra uma notificação do Windows quando não consegue resolver:
+  - IP da LAN ausente;
+  - container inexistente;
+  - sem saúde depois de reiniciado;
+  - sem resposta no IP da LAN;
+  - logs acima de 200 MB.
+
+  O mesmo alerta não se repete antes de 6 horas.
+
+A tarefa nunca cria container nem muda o endereço publicado. O log fica em `C:\KavitaBackups\health.log`. Use `check-health.ps1 -WhatIf` para ver o estado sem agir.
+
+Recomendações fora do repositório, a cargo do usuário:
+
+- reserva de DHCP para o PC no roteador, para o IP da LAN não mudar;
+- "Start Docker Desktop when you sign in" ligado.
+
+Testes:
+
+- `./deployment/offline/tests/health-rules.tests.ps1`, sem Docker;
+- `./deployment/offline/tests/check-health.tests.ps1 -Image <imagem>`: servidor descartável em `127.0.0.1:5061`, parado e iniciado pela tarefa. Mostra uma notificação de teste.
+
 ### Arquivos novos no PC (item 4.9)
 
 O watcher de pastas do Kavita **não recebe eventos** do bind mount do Windows no Docker Desktop. Teste de 2026-10-20: `inotifywait` num mount somente leitura terminou por tempo esgotado (exit 2) depois da criação de um arquivo no Windows. A data de modificação da pasta, porém, chega ao container (`stat` mostrou a pasta atualizada), e o scan incremental se baseia nela.
