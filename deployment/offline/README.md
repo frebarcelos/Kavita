@@ -175,6 +175,35 @@ Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois script
   - `./deployment/offline/tests/backup-retention.tests.ps1`, sem Docker;
   - `./deployment/offline/tests/backup-config.tests.ps1 -Image <imagem>`: backup e restauração num servidor descartável em `127.0.0.1`.
 
+### HTTPS na rede doméstica (item 5.5)
+
+Um proxy Caddy (`compose.https.yaml`) fica na frente do Kavita, com uma autoridade certificadora local (`tls internal`). Ele publica só HTTPS, na porta 5443 do `KAVITA_BIND_ADDRESS`. Não usa porta 80 nem instala confiança no sistema. A migração tem três etapas, para o tablet nunca ficar sem servidor:
+
+1. **Ligar o HTTPS ao lado do HTTP:**
+   - em PowerShell como administrador, `./deployment/offline/firewall-lan.ps1`. Ele aplica as mesmas regras da 5000 (só a sub-rede local) às portas 5000 e 5443;
+   - depois, `./deployment/offline/enable-https.ps1`. Ele sobe só o proxy, sem recriar o Kavita, exporta a raiz para `C:\KavitaBackups\https` (`root.crt` e `root.key`) e confere uma chamada a `/api/health` confiando só nessa raiz.
+2. **Migrar os clientes:**
+   - Kover: `..\kover\tool\build_apk.ps1` embute `root.crt` no APK; depois troque o servidor para `https://<IP>:5443`;
+   - navegador do PC: `certutil -user -addstore Root C:\KavitaBackups\https\root.crt`, só para o usuário atual.
+3. **Tirar o HTTP da rede:** só depois que todos os clientes usarem HTTPS, volte a porta 5000 para `127.0.0.1` e rode `firewall-lan.ps1 -Ports 5443`.
+
+Cuidados:
+
+- `root.key` emite certificados em que todos os clientes confiam. Mantenha `C:\KavitaBackups\https` privada e fora do Git.
+- Se o volume do proxy se perder, `enable-https.ps1` recria a mesma autoridade a partir dessa pasta. Os clientes continuam confiando sem reinstalar nada.
+- O `deploy-fork.ps1` não mexe no proxy, que continua rodando entre deploys.
+
+Testes:
+
+- `./deployment/offline/tests/https-proxy.tests.ps1 -Image <imagem>`:
+  - só HTTPS e só no endereço configurado;
+  - cliente sem a raiz recusado;
+  - HTTP sem conteúdo e porta 80 fechada.
+- `./deployment/offline/tests/enable-https.tests.ps1 -Image <imagem>`:
+  - o Kavita não é recriado;
+  - a raiz é exportada;
+  - a mesma autoridade volta depois da perda do volume.
+
 ### Saúde depois de reiniciar o PC (itens 5.3, 5.4 e 5.8)
 
 `./deployment/offline/install-health-task.ps1` registra a tarefa "Kavita - saude", na conta do usuário. Ela roda 2 minutos depois do logon e a cada 15 minutos, executando `check-health.ps1`. A tarefa:
