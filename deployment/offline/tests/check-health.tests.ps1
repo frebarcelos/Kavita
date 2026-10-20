@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$Image)
+﻿param([Parameter(Mandatory = $true)][string]$Image)
 $ErrorActionPreference = 'Stop'
 # The health task on a disposable server bound to 127.0.0.1:5061, under its own Compose project labels. The main
 # server and the library are never used. Run from the repository root, without redirecting stderr; everything created
@@ -19,18 +19,22 @@ function Wait-Healthy {
     }
     return $false
 }
-function Status { docker inspect -f '{{.State.Status}}' $name }
+function Status([string]$container = $name) { docker inspect -f '{{.State.Status}}' $container }
+$proxy = "$project-https-1"
+$network = "$project-net"
 function Cleanup {
     $ErrorActionPreference = 'Continue'
-    if (docker ps -aq --filter "name=^$name$") { docker rm -f $name | Out-Null }
+    foreach ($c in $name, $proxy) { if (docker ps -aq --filter "name=^$c$") { docker rm -f $c | Out-Null } }
     if (docker volume ls -q --filter "name=^$name$") { docker volume rm $name | Out-Null }
+    if (docker network ls -q --filter "name=^$network$") { docker network rm $network | Out-Null }
     if (Test-Path $root) { Remove-Item -Recurse -Force $root }
 }
 
 Cleanup
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 try {
-    docker run -d --name $name -p 127.0.0.1:5061:5000 --mount "type=volume,source=$name,target=/kavita/config" `
+    docker network create $network | Out-Null
+    docker run -d --name $name --network $network --network-alias kavita -p 127.0.0.1:5061:5000 --mount "type=volume,source=$name,target=/kavita/config" `
         --label "com.docker.compose.project=$project" --label 'com.docker.compose.service=kavita' `
         --health-cmd 'curl -fsS http://localhost:5000/api/health' --health-interval 5s --health-retries 5 $Image | Out-Null
     Check (Wait-Healthy) 'disposable server starts'
@@ -45,6 +49,22 @@ try {
     Check ((Status) -eq 'running') 'starts the stopped server'
     Check (Select-String -Path "$root/health.log" -Pattern 'Container parado' -Quiet) 'logs the start'
     Check (Wait-Healthy) 'healthy again'
+
+    # The HTTPS proxy of the same project, stopped: the task starts it again
+    $caddyfile = (Resolve-Path deployment/offline/https/Caddyfile).Path
+    docker run -d --name $proxy --network $network -p 127.0.0.1:5446:443 -e KAVITA_HTTPS_HOST=127.0.0.1 `
+        --mount "type=bind,source=$caddyfile,target=/etc/caddy/Caddyfile,readonly" `
+        --label "com.docker.compose.project=$project" --label 'com.docker.compose.service=https' `
+        caddy:2.8.4-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17 | Out-Null
+    Start-Sleep -Seconds 5
+    docker stop $proxy | Out-Null
+    & ./deployment/offline/check-health.ps1 -Project $project -LogDir $root
+    Check ((Status $proxy) -eq 'running') 'starts the stopped HTTPS proxy'
+    Check (Select-String -Path "$root/health.log" -Pattern 'Proxy HTTPS parado' -Quiet) 'logs the proxy start'
+    Start-Sleep -Seconds 5
+    $before = @(Get-Content "$root/health.log").Count
+    & ./deployment/offline/check-health.ps1 -Project $project -LogDir $root
+    Check (@(Get-Content "$root/health.log").Count -eq $before) 'the proxy answers: nothing more to do'
 
     # No container: alert only, nothing created
     & ./deployment/offline/check-health.ps1 -Project 'kavita-healthtest-none' -LogDir $root

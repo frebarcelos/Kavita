@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 # Rules of the health task (check-health.ps1), without Docker. Run from the repository root.
 . ./deployment/offline/health/health-rules.ps1
 $failures = @()
@@ -7,7 +7,8 @@ function Check([bool]$condition, [string]$name) {
 }
 function Healthy {
     @{ DockerUp = $true; Container = 'running'; Health = 'healthy'; LanAddressPresent = $true; ApiReachable = $true;
-       LogsMB = 10; LogsLimitMB = 200; RestartedRecently = $false; DockerStartedRecently = $false }
+       LogsMB = 10; LogsLimitMB = 200; RestartedRecently = $false; DockerStartedRecently = $false
+       Proxy = 'running'; ProxyReachable = $true }
 }
 function Actions([hashtable]$changes) {
     $state = Healthy
@@ -37,6 +38,13 @@ Check ((Kinds (Actions @{ Health = 'starting' })) -eq '') 'waits while it starts
 Check ((Kinds (Actions @{ ApiReachable = $false })) -eq 'alert') 'healthy inside but unreachable on the LAN: alert'
 Check ((Kinds (Actions @{ LogsMB = 250 })) -eq 'alert') 'logs over the limit: alert'
 Check ((Kinds (Actions @{ Health = 'unhealthy'; LogsMB = 250 })) -eq 'restart,alert') 'acts on each problem'
+
+# The HTTPS proxy (item 5.5), the way in from the tablet
+Check ((Kinds (Actions @{ Proxy = 'none'; ProxyReachable = $false })) -eq '') 'without HTTPS enabled nothing is checked'
+Check ((Kinds (Actions @{ Proxy = 'exited'; ProxyReachable = $false })) -eq 'start-proxy') 'starts a stopped proxy'
+Check ((Kinds (Actions @{ Proxy = 'exited'; ProxyReachable = $false; LanAddressPresent = $false })) -eq 'alert') 'without the LAN address the proxy stays stopped'
+Check ((Kinds (Actions @{ ProxyReachable = $false })) -eq 'alert') 'proxy running but not answering: alert'
+Check ((Kinds (Actions @{ Proxy = 'missing'; ProxyReachable = $false })) -eq 'alert') 'HTTPS enabled but its proxy is gone: alert'
 
 if ($failures) { throw "$($failures.Count) failed: $($failures -join '; ')" }
 Write-Output 'All health rule tests passed.'

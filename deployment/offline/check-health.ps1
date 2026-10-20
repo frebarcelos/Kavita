@@ -33,7 +33,8 @@ if (Test-Path $stateFile) {
 $state = @{ DockerUp = $false; Container = 'unknown'; Health = ''; LanAddressPresent = $false; ApiReachable = $false
             LogsMB = 0; LogsLimitMB = $LogsLimitMB
             RestartedRecently = [bool]($memory.LastRestart -and $memory.LastRestart -gt (Get-Date).AddHours(-1))
-            DockerStartedRecently = [bool]($memory.LastDockerStart -and $memory.LastDockerStart -gt (Get-Date).AddMinutes(-15)) }
+            DockerStartedRecently = [bool]($memory.LastDockerStart -and $memory.LastDockerStart -gt (Get-Date).AddMinutes(-15))
+            Proxy = 'none'; ProxyReachable = $false }
 docker info --format '{{.ServerVersion}}' *> $null
 $state.DockerUp = $LASTEXITCODE -eq 0
 
@@ -62,6 +63,26 @@ if ($state.DockerUp) {
             $du = docker exec $id du -sm /kavita/config/logs 2> $null
             if ($LASTEXITCODE -eq 0 -and $du) { $state.LogsMB = [int](($du -split '\s+')[0]) }
         }
+    }
+
+    # The HTTPS proxy (enable-https.ps1), when HTTPS is enabled: its volume holds the local authority
+    $proxyFilters = @('--filter', "label=com.docker.compose.project=$Project", '--filter', 'label=com.docker.compose.service=https')
+    $proxyIds = @(docker ps -aq @proxyFilters)
+    if ($proxyIds.Count -eq 1) {
+        $proxyId = $proxyIds[0]
+        $proxyInfo = (docker inspect $proxyId | ConvertFrom-Json)[0]
+        $state.Proxy = $proxyInfo.State.Status
+        $proxyBinding = @($proxyInfo.HostConfig.PortBindings.'443/tcp')[0]
+        if (-not ($proxyBinding.HostIp -and (Get-NetIPAddress -IPAddress $proxyBinding.HostIp -ErrorAction SilentlyContinue))) {
+            $state.LanAddressPresent = $false
+        }
+        if ($state.Proxy -eq 'running') {
+            # Only whether it answers: the app itself checks the certificate
+            $code = curl.exe -sk -o NUL -w '%{http_code}' --max-time 10 "https://$($proxyBinding.HostIp):$($proxyBinding.HostPort)/api/health"
+            $state.ProxyReachable = $code -eq '200'
+        }
+    } elseif (docker volume ls -q --filter "name=^${Project}_https-data$") {
+        $state.Proxy = 'missing'
     }
 }
 
@@ -97,6 +118,10 @@ foreach ($action in $actions) {
         }
         'start' {
             docker start $id | Out-Null
+            Log "$($action.Message) (exit $LASTEXITCODE)"
+        }
+        'start-proxy' {
+            docker start $proxyId | Out-Null
             Log "$($action.Message) (exit $LASTEXITCODE)"
         }
         'restart' {
