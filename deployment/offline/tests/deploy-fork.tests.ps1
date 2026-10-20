@@ -24,7 +24,7 @@ function Deploy([string]$image, [hashtable]$extra = @{}) {
 function RunningImage { docker inspect -f '{{.Config.Image}}' $container }
 function Cleanup {
     $ErrorActionPreference = 'Continue'
-    if (docker ps -aq --filter "name=^$container$") { docker rm -f $container | Out-Null }
+    docker ps -aq --filter "label=com.docker.compose.project=$project" | ForEach-Object { docker rm -f $_ | Out-Null }
     docker volume ls -q --filter "label=kavita.fork.checkpoint=$project" | ForEach-Object { docker volume rm $_ | Out-Null }
     if (docker volume ls -q --filter "name=^$active$") { docker volume rm $active | Out-Null }
     if (docker images -q $broken) { docker rmi $broken | Out-Null }
@@ -64,13 +64,31 @@ try {
     Check $refused 'refuses without free space'
     Check ((RunningImage) -eq $ImageA -and (docker inspect -f '{{.State.Running}}' $container) -eq 'true') 'server untouched after refusal'
 
+    # A deploy already running (or interrupted) holds a lock: a second one refuses before stopping anything
+    New-Item -ItemType Directory -Force -Path "$root/deploys" | Out-Null
+    Set-Content -Path "$root/deploys/.deploy.lock" -Value 'held'
+    $locked = $false
+    try { Deploy $ImageB } catch { $locked = $_.Exception.Message -match 'lock' }
+    Check $locked 'refuses while another deploy holds the lock'
+    Check ((RunningImage) -eq $ImageA -and (docker inspect -f '{{.State.Running}}' $container) -eq 'true') 'server untouched while locked'
+    Remove-Item "$root/deploys/.deploy.lock"
+
+    # An interrupted Compose recreate leaves the container under a temporary name: the deploy still finds it
+    docker rename $container "0123456789ab_$container" | Out-Null
+    Deploy $ImageB
+    Check ((docker ps -q --filter "name=^$container$") -ne $null) 'container back under its own name'
+    Check ((RunningImage) -eq $ImageB) 'deploy works from a temporary name'
+    Check (-not (Test-Path "$root/deploys/.deploy.lock")) 'lock released after the deploy'
+    Deploy $ImageA
+
     # Successful deploy
     Deploy $ImageB
     Check ((RunningImage) -eq $ImageB) 'runs the new image'
     Check ((docker inspect -f '{{.State.Health.Status}}' $container) -eq 'healthy') 'new image healthy'
     Check ((Get-Content "$root/override.yaml" -Raw).Contains("image: $ImageB")) 'override points to the new image'
-    $checkpoints = @(docker volume ls -q --filter "label=kavita.fork.checkpoint=$project")
-    Check ($checkpoints.Count -eq 1) 'one labelled checkpoint'
+    # Newest first; the deploys above already left two
+    $checkpoints = @(docker volume ls -q --filter "label=kavita.fork.checkpoint=$project" | Sort-Object -Descending)
+    Check ($checkpoints.Count -eq 2) 'two labelled checkpoints at most'
     $listing = @(docker run --rm --mount "type=volume,source=$($checkpoints[0]),target=/c,readonly" --entrypoint /bin/ls $ImageB /c)
     Check ($listing -contains 'kavita.db') 'checkpoint keeps the database'
     Check ($listing -notcontains 'cache') 'checkpoint leaves the cache out'
