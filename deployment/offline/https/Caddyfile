@@ -1,0 +1,14 @@
+# Fork (item 5.5): HTTPS on the home network in front of Kavita. The certificate comes from Caddy's own local
+# authority, kept in the https-data volume; clients trust its root (root.crt), nothing is trusted system-wide here.
+{
+	# Only HTTPS: no listener on port 80 and no redirect
+	auto_https disable_redirects
+	skip_install_trust
+	# Clients connect by IP and send no server name
+	default_sni {$KAVITA_HTTPS_HOST}
+}
+
+https://{$KAVITA_HTTPS_HOST} {
+	tls internal
+	reverse_proxy kavita:5000
+}
