@@ -25,11 +25,13 @@ using Kavita.Models.Entities.Enums;
 using Kavita.Models.Entities.Progress;
 using Kavita.Models.Entities.User;
 using Kavita.Server.Attributes;
+using Kavita.Server.Helpers;
 using Kavita.Services;
 using Kavita.Services.Metadata;
 using Kavita.Services.Reading;
 using Kavita.Services.Scanner;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +46,8 @@ public class ReaderController(ICacheService cacheService,
     IReaderService readerService, IBookmarkService bookmarkService, IEventHub eventHub,
     IScrobblingService scrobblingService,
     ILocalizationService localizationService,
-    IBookService bookService) : BaseApiController
+    IBookService bookService,
+    ProgressWriteThrottle progressWriteThrottle) : BaseApiController
 {
 
     /// <summary>
@@ -686,6 +689,12 @@ public class ReaderController(ICacheService cacheService,
     {
         var ct = HttpContext.RequestAborted;
         var userId = UserId;
+
+        // Fork: a client saving the same chapter in a loop gets 429; readers retry with the page they are on
+        if (!progressWriteThrottle.TryAcquire(userId, progressDto.ChapterId))
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests);
+        }
 
         if (!await readerService.SaveReadingProgress(progressDto, userId, ct: ct))
         {

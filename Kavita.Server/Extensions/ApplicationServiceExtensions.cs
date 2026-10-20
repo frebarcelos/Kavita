@@ -3,6 +3,7 @@ using Kavita.API.Store;
 using Kavita.Common;
 using Kavita.Database.Extensions;
 using Kavita.Models.Constants;
+using Kavita.Server.Helpers;
 using Kavita.Server.Logging;
 using Kavita.Server.Middleware;
 using Kavita.Server.Store;
@@ -22,6 +23,7 @@ public static class ApplicationServiceExtensions
     {
         services.AddScoped<ILoggingService, LoggingService>();
         services.AddSingleton<IClientInfoAccessor, ClientInfoAccessor>();
+        services.AddSingleton<ProgressWriteThrottle>(_ => new ProgressWriteThrottle());
         services.AddScoped<UserContext>();
         services.AddScoped<IUserContext>(sp => sp.GetRequiredService<UserContext>());
 
