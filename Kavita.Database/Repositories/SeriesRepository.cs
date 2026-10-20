@@ -1849,6 +1849,56 @@ public class SeriesRepository(DataContext context, IMapper mapper) : ISeriesRepo
             .AnyAsync(ct);
     }
 
+    public async Task<IList<SeriesFolderFiles>> GetFolderSeriesFilesAsync(int libraryId, CancellationToken ct = default)
+    {
+        var files = await context.MangaFile
+            .Where(f => f.Chapter.Volume.Series.LibraryId == libraryId && f.Chapter.Volume.Series.FolderPath != null)
+            .Select(f => new { f.Chapter.Volume.SeriesId, f.Chapter.Volume.Series.FolderPath, f.FilePath, f.Bytes })
+            .AsNoTracking()
+            .ToListAsync(ct);
+        return files
+            .GroupBy(f => (f.SeriesId, f.FolderPath))
+            .Select(g => new SeriesFolderFiles(g.Key.SeriesId, g.Key.FolderPath!,
+                g.Select(f => new SeriesFolderFile(f.FilePath, f.Bytes)).ToList()))
+            .ToList<SeriesFolderFiles>();
+    }
+
+    public async Task MoveFolderCoversAsync(int libraryId, string oldFolder, string newFolder, CancellationToken ct = default)
+    {
+        var roots = (await context.FolderPath.Where(f => f.LibraryId == libraryId).Select(f => f.Path).ToListAsync(ct))
+            .Select(TrimFolder)
+            .ToList();
+        var from = RelativeFolder(roots, TrimFolder(oldFolder));
+        var to = RelativeFolder(roots, TrimFolder(newFolder));
+        if (from == null || to == null || from.Length == 0 || from == to) return;
+
+        var covers = await context.FolderCover
+            .Where(c => c.LibraryId == libraryId && (c.Path == from || c.Path.StartsWith(from + "/")))
+            .ToListAsync(ct);
+        foreach (var cover in covers)
+        {
+            cover.Path = to + cover.Path[from.Length..];
+        }
+
+        static string TrimFolder(string path) => path.Replace('\\', '/').TrimEnd('/');
+    }
+
+    /// <summary>A folder relative to the library root, as the folder tree shows it; null outside every root</summary>
+    private static string? RelativeFolder(IList<string> roots, string folder)
+    {
+        var root = roots
+            .Where(r => folder == r || folder.StartsWith(r + "/", StringComparison.Ordinal))
+            .MaxBy(r => r.Length);
+        if (root == null) return null;
+        var relative = folder.Length == root.Length ? string.Empty : folder[(root.Length + 1)..];
+        if (roots.Count > 1)
+        {
+            var rootName = root[(root.LastIndexOf('/') + 1)..];
+            relative = relative.Length == 0 ? rootName : $"{rootName}/{relative}";
+        }
+        return relative;
+    }
+
     public async Task<IList<FolderSeriesDto>> GetFolderSeriesAsync(int libraryId, int userId, CancellationToken ct = default)
     {
         var roots = (await context.FolderPath

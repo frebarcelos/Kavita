@@ -1,6 +1,7 @@
 using Kavita.Database;
 using Kavita.Database.Tests;
 using Kavita.Models.Builders;
+using Kavita.Models.Entities;
 using Kavita.Models.Entities.Enums;
 using Kavita.Models.Entities.Progress;
 using Kavita.Models.Entities.User;
@@ -286,6 +287,126 @@ public class FolderOrganizationScanTests(ITestOutputHelper output) : AbstractDbT
         var orders = await context.Chapter.Where(c => c.Volume.Series.LibraryId == library.Id)
             .Select(c => c.SortOrder).Distinct().ToListAsync();
         Assert.Equal(2, orders.Count);
+    }
+
+    /// <summary>
+    /// ComicInfo of different lengths gives each file its own size, as real files have
+    /// </summary>
+    private static Dictionary<string, ComicInfo> Sized(params string[] names) =>
+        names.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => new ComicInfo { Summary = new string('x', 100 * (p.i + 1)) });
+
+    private static async Task<AppUserProgress> ReadOn(DataContext context, int libraryId, string fileName)
+    {
+        var file = await context.MangaFile.Include(f => f.Chapter).ThenInclude(c => c.Volume)
+            .SingleAsync(f => f.Chapter.Volume.Series.LibraryId == libraryId && f.FilePath.EndsWith(fileName));
+        var progress = new AppUserProgress
+        {
+            AppUserId = await context.Users.Select(u => u.Id).SingleAsync(), LibraryId = libraryId,
+            SeriesId = file.Chapter.Volume.SeriesId, VolumeId = file.Chapter.VolumeId, ChapterId = file.ChapterId, PagesRead = 1
+        };
+        context.AppUserProgresses.Add(progress);
+        await context.SaveChangesAsync();
+        return progress;
+    }
+
+    [Fact]
+    public async Task Scan_RenamedFolder_KeepsTheSeriesItsChaptersProgressAndFolderCover()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        var info = Sized("Alpha v01.cbz", "Beta v02.cbz");
+        var library = await helper.GenerateScannerData("Folder Rename - Manga",
+            ["Old Name/Alpha v01.cbz", "Old Name/Beta v02.cbz"], info);
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var series = await context.Series.SingleAsync(s => s.LibraryId == library.Id);
+        var chapters = (await Placements(context, library.Id)).ToDictionary(p => Path.GetFileName(p.Key), p => p.Value);
+        var progress = await ReadOn(context, library.Id, "Alpha v01.cbz");
+        context.FolderCover.Add(new FolderCover { LibraryId = library.Id, Path = "Old Name", CoverImage = "fldr.webp" });
+        await context.SaveChangesAsync();
+
+        // Renamed on the PC: same files, other folder
+        await helper.UpdateTestData("Folder Rename - Manga", ["New Name/Alpha v01.cbz", "New Name/Beta v02.cbz"], info);
+        await scanner.ScanLibrary(library.Id);
+
+        var after = await context.Series.Where(s => s.LibraryId == library.Id).ToListAsync();
+        var renamed = Assert.Single(after);
+        Assert.Equal(series.Id, renamed.Id);
+        Assert.Equal("New Name", renamed.Name);
+        var placements = (await Placements(context, library.Id)).ToDictionary(p => Path.GetFileName(p.Key), p => p.Value);
+        Assert.Equal(chapters, placements);
+        Assert.Equal(progress.ChapterId, (await context.AppUserProgresses.SingleAsync()).ChapterId);
+        Assert.Equal("New Name", (await context.FolderCover.SingleAsync(c => c.LibraryId == library.Id)).Path);
+    }
+
+    [Fact]
+    public async Task Scan_CopiedFolder_IsANewSeriesAndTheOriginalKeepsItsIdentity()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        var info = Sized("Alpha v01.cbz", "Beta v02.cbz");
+        var library = await helper.GenerateScannerData("Folder Copy - Manga", ["Original/Alpha v01.cbz", "Original/Beta v02.cbz"], info);
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var before = await Placements(context, library.Id);
+
+        await helper.UpdateTestData("Folder Copy - Manga",
+            ["Original/Alpha v01.cbz", "Original/Beta v02.cbz", "Copy/Alpha v01.cbz", "Copy/Beta v02.cbz"], info);
+        await scanner.ScanLibrary(library.Id);
+
+        var after = await Placements(context, library.Id);
+        foreach (var (path, placement) in before) Assert.Equal(placement, after[path]);
+        Assert.Equal(2, await context.Series.CountAsync(s => s.LibraryId == library.Id));
+    }
+
+    [Fact]
+    public async Task Scan_RenamedFile_KeepsItsChapterAndProgress()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        var library = await helper.GenerateScannerData("File Rename - Manga",
+            ["Series/Alpha v01.cbz", "Series/Beta v02.cbz"], Sized("Alpha v01.cbz", "Beta v02.cbz"));
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var progress = await ReadOn(context, library.Id, "Alpha v01.cbz");
+
+        // Same content (so same size), new name
+        await helper.UpdateTestData("File Rename - Manga", ["Series/Alpha renamed v01.cbz", "Series/Beta v02.cbz"],
+            Sized("Alpha renamed v01.cbz", "Beta v02.cbz"));
+        await scanner.ScanLibrary(library.Id);
+
+        var file = await context.MangaFile.SingleAsync(f => f.FilePath.EndsWith("Alpha renamed v01.cbz"));
+        Assert.Equal(progress.ChapterId, file.ChapterId);
+        Assert.Equal(progress.ChapterId, (await context.AppUserProgresses.SingleAsync()).ChapterId);
+        Assert.Equal(2, await context.Chapter.CountAsync(c => c.Volume.Series.LibraryId == library.Id));
+    }
+
+    [Fact]
+    public async Task Scan_RenamedFilesOfTheSameSize_AreNotGuessed()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        // Without ComicInfo every file is empty: two renamed files cannot be told apart
+        var library = await helper.GenerateScannerData("Ambiguous Rename - Manga",
+            ["Series/Alpha v01.cbz", "Series/Beta v02.cbz"], new Dictionary<string, ComicInfo>());
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var before = await context.Chapter.Where(c => c.Volume.Series.LibraryId == library.Id).Select(c => c.Id).ToListAsync();
+
+        await helper.UpdateTestData("Ambiguous Rename - Manga", ["Series/Gamma v01.cbz", "Series/Delta v02.cbz"],
+            new Dictionary<string, ComicInfo>());
+        await scanner.ScanLibrary(library.Id);
+
+        var after = await context.Chapter.Where(c => c.Volume.Series.LibraryId == library.Id).Select(c => c.Id).ToListAsync();
+        Assert.Empty(after.Intersect(before));
     }
 
     private static async Task<Dictionary<string, Placement>> Placements(DataContext context, int libraryId) =>

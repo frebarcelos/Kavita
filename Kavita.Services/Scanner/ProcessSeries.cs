@@ -119,6 +119,19 @@ public class ProcessSeries(
             return ProcessSeriesResult.NotSaved;
         }
 
+        if (library.FolderBasedOrganization)
+        {
+            // Fork: a folder renamed or moved on disk, or a file renamed in it, keeps its series and chapters
+            if (series == null)
+            {
+                series = await FindMovedFolderSeries(library, firstInfo, parsedInfos);
+            }
+            else
+            {
+                RemapRenamedFiles(series, parsedInfos);
+            }
+        }
+
         if (series == null)
         {
             seriesAdded = true;
@@ -385,6 +398,93 @@ public class ProcessSeries(
         }
     }
 
+
+    /// <summary>
+    /// A new folder whose files (name and size) are the files of a series whose folder is gone from disk is that
+    /// folder renamed or moved. The series is kept, with its files pointed at their new paths, so chapters,
+    /// progress and the folder cover keep their ids. A copy (the old folder still exists) or more than one possible
+    /// series is not guessed: the folder becomes a new series.
+    /// </summary>
+    private async Task<Series?> FindMovedFolderSeries(Library library, ParserInfo firstInfo, IList<ParserInfo> parsedInfos)
+    {
+        var arrived = ArrivedFiles(parsedInfos.Select(p => p.FullFilePath));
+        if (arrived.Count == 0) return null;
+
+        var candidates = (await unitOfWork.SeriesRepository.GetFolderSeriesFilesAsync(library.Id))
+            .Where(c => c.FolderPath != firstInfo.FolderKey && c.Files.Count > 0 && !directoryService.Exists(c.FolderPath))
+            .Where(c =>
+            {
+                var found = c.Files.Count(f => arrived.Any(a => SameFile(a, f.FilePath, f.Bytes)));
+                return found > 0 && found * 5 >= c.Files.Count * 4;
+            })
+            .ToList();
+        if (candidates.Count != 1) return null;
+
+        var moved = await unitOfWork.SeriesRepository.GetFullSeriesByFolderAsync(library.Id, candidates[0].FolderPath);
+        if (moved == null) return null;
+
+        foreach (var file in moved.Volumes.SelectMany(v => v.Chapters).SelectMany(c => c.Files))
+        {
+            var match = arrived.Where(a => SameFile(a, file.FilePath, file.Bytes)).ToList();
+            if (match.Count == 1) file.FilePath = match[0].Path;
+        }
+        if (!moved.NameLocked)
+        {
+            moved.Name = firstInfo.Series;
+            moved.OriginalName = firstInfo.Series;
+        }
+        await unitOfWork.SeriesRepository.MoveFolderCoversAsync(library.Id, candidates[0].FolderPath, firstInfo.FolderKey!);
+        logger.LogInformation("[ScannerService] Folder {OldFolder} was renamed or moved to {NewFolder}; series {SeriesId} kept",
+            candidates[0].FolderPath, firstInfo.FolderKey, moved.Id);
+        return moved;
+    }
+
+    /// <summary>
+    /// A file gone from the series folder and a new one with the same size and extension are the same file renamed.
+    /// Only one-to-one pairs are taken; files that could be swapped for each other are left as they are.
+    /// </summary>
+    private void RemapRenamedFiles(Series series, IList<ParserInfo> parsedInfos)
+    {
+        var seen = parsedInfos.Select(p => p.FullFilePath).ToHashSet();
+        var files = series.Volumes.SelectMany(v => v.Chapters).SelectMany(c => c.Files).ToList();
+        var known = files.Select(f => Parser.NormalizePath(f.FilePath)).ToHashSet();
+        var gone = files.Where(f => !seen.Contains(Parser.NormalizePath(f.FilePath))).ToList();
+        if (gone.Count == 0) return;
+        var arrived = ArrivedFiles(seen.Where(p => !known.Contains(p)));
+        if (arrived.Count == 0) return;
+
+        foreach (var file in gone)
+        {
+            var extension = Path.GetExtension(file.FilePath);
+            var candidates = arrived.Where(a => a.Bytes == file.Bytes && Path.GetExtension(a.Path) == extension).ToList();
+            if (candidates.Count != 1) continue;
+            var rivals = gone.Count(g => g.Bytes == file.Bytes && Path.GetExtension(g.FilePath) == extension);
+            if (rivals != 1) continue;
+
+            logger.LogInformation("[ScannerService] File {OldFile} was renamed to {NewFile}", file.FilePath, candidates[0].Path);
+            file.FilePath = candidates[0].Path;
+        }
+    }
+
+    private List<(string Path, string Name, long Bytes)> ArrivedFiles(IEnumerable<string> paths)
+    {
+        var arrived = new List<(string Path, string Name, long Bytes)>();
+        foreach (var path in paths.Distinct())
+        {
+            try
+            {
+                arrived.Add((path, Path.GetFileName(path), directoryService.FileSystem.FileInfo.New(path).Length));
+            }
+            catch (Exception)
+            {
+                // Unreadable now: it cannot be matched
+            }
+        }
+        return arrived;
+    }
+
+    private static bool SameFile((string Path, string Name, long Bytes) arrived, string filePath, long bytes) =>
+        arrived.Bytes == bytes && arrived.Name == Path.GetFileName(filePath);
 
     private async Task UpdateSeriesFolderPath(IReadOnlyCollection<string> filePaths, Library library, Series series)
     {
