@@ -8,7 +8,7 @@ on:
       - scripts/offline/**
       - .github/workflows/offline-server.yml
   push:
-    branches: [develop]
+    branches: [develop, 'fork/**']
     paths:
       - deployment/offline/**
       - scripts/offline/**

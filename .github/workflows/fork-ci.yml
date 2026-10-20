@@ -1,0 +1,66 @@
+name: Fork CI
+
+# Fork: tests and the server image for every push to a fork branch. Uses no secret and publishes nothing; the
+# upstream release workflow only runs in Kareadita/Kavita.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['fork/**']
+
+permissions:
+  contents: read
+
+jobs:
+  dotnet:
+    name: .NET tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore
+      - name: Test
+        # The scan benchmark only measures when KAVITA_BENCH_FOLDERS is set
+        run: dotnet test --no-restore -p:RunAnalyzers=false --filter "Category!=Integration&Category!=Benchmark"
+
+  web:
+    name: Web tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: UI/Web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0
+      - name: Install
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Test
+        run: npm test
+
+  image:
+    name: Server image
+    needs: [dotnet, web]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # git describe needs the fork tags
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0
+      - name: Install web dependencies
+        working-directory: UI/Web
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Build the image
+        shell: pwsh
+        run: ./deployment/offline/build-fork-image.ps1
+      - name: Show the image and its commit
+        run: docker image ls kavita-fork --format '{{.Repository}}:{{.Tag}} {{.Size}}'

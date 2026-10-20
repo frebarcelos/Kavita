@@ -143,9 +143,8 @@ Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois script
 1. **Build:** `./deployment/offline/build-fork-image.ps1`.
    - Recusa árvore com alterações. Com trabalho não commitado no checkout, gere a imagem de um worktree limpo do commit:
      - `git worktree add --detach _temp/build-worktree HEAD`;
-     - ligue o `node_modules` do checkout com `New-Item -ItemType Junction -Path _temp\build-worktree\UI\Web\node_modules -Target (Resolve-Path UI\Web\node_modules)`. O `npm ci` recusa o lock do upstream; os `package*.json` precisam ser iguais aos do commit;
-     - rode o script de dentro do worktree;
-     - no fim, remova a junção só com `cmd /c rmdir`. Uma exclusão recursiva segue a junção e apagaria o `node_modules` do checkout.
+     - em `_temp/build-worktree/UI/Web`, instale as dependências com `npm ci --legacy-peer-deps`, como a CI do upstream (sem o flag, o `npm ci` recusa o lock);
+     - rode o script de dentro do worktree.
    - Publica o backend no container do SDK .NET e faz o build de produção da interface.
    - Gera `kavita-fork:<git describe>` com o SHA do commit em `org.opencontainers.image.revision`.
    - O [Dockerfile.fork](Dockerfile.fork) apaga os arquivos da 0.9.1 em `/kavita` (exceto `config/`) antes de copiar o publish do fork.
