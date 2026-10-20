@@ -1,6 +1,7 @@
 # Fork (item 5.5): HTTPS proxy for the home network, added on top of compose.yaml and the libraries override:
 #   docker compose ... -f deployment/offline/compose.yaml -f <libraries override> -f deployment/offline/compose.https.yaml
-# Published only on KAVITA_BIND_ADDRESS (127.0.0.1 or the private LAN address), never on 0.0.0.0.
+# Published only on KAVITA_HTTPS_BIND_ADDRESS, by default KAVITA_BIND_ADDRESS (127.0.0.1 or the private LAN address),
+# never on 0.0.0.0. lan-https-only.ps1 keeps HTTP on 127.0.0.1 and HTTPS alone on the LAN address.
 services:
   https:
     image: caddy:2.8.4-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
@@ -8,9 +9,9 @@ services:
     depends_on:
       - kavita
     environment:
-      KAVITA_HTTPS_HOST: ${KAVITA_BIND_ADDRESS:-127.0.0.1}
+      KAVITA_HTTPS_HOST: ${KAVITA_HTTPS_BIND_ADDRESS:-${KAVITA_BIND_ADDRESS:-127.0.0.1}}
     ports:
-      - "${KAVITA_BIND_ADDRESS:-127.0.0.1}:${KAVITA_HTTPS_PORT:-5443}:443"
+      - "${KAVITA_HTTPS_BIND_ADDRESS:-${KAVITA_BIND_ADDRESS:-127.0.0.1}}:${KAVITA_HTTPS_PORT:-5443}:443"
     volumes:
       - type: bind
         source: ./https/Caddyfile

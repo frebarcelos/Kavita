@@ -185,7 +185,12 @@ Um proxy Caddy (`compose.https.yaml`) fica na frente do Kavita, com uma autorida
 2. **Migrar os clientes:**
    - Kover: `..\kover\tool\build_apk.ps1` embute `root.crt` no APK; depois troque o servidor para `https://<IP>:5443`;
    - navegador do PC: `certutil -user -addstore Root C:\KavitaBackups\https\root.crt`, só para o usuário atual.
-3. **Tirar o HTTP da rede:** só depois que todos os clientes usarem HTTPS, volte a porta 5000 para `127.0.0.1` e rode `firewall-lan.ps1 -Ports 5443`.
+3. **Tirar o HTTP da rede:** só depois que todos os clientes usarem HTTPS.
+   - Rode `./deployment/offline/lan-https-only.ps1`. Ele grava `KAVITA_HTTPS_BIND_ADDRESS` (o IP da LAN, para o proxy) e `KAVITA_BIND_ADDRESS=127.0.0.1` no `.env`, guarda uma cópia do `.env` anterior e recria o Kavita, com a mesma imagem e o mesmo volume.
+   - Ele confere a saúde e uma chamada pelo proxy confiando só na raiz. Se algo falhar, volta sozinho.
+   - Depois, como administrador, rode `firewall-lan.ps1 -Ports 5443`.
+   - `-Undo` devolve o HTTP à LAN.
+   - O `deploy-fork.ps1` lê o endereço do `.env` e continua recusando `0.0.0.0`.
 
 Cuidados:
 
@@ -199,6 +204,7 @@ Testes:
   - só HTTPS e só no endereço configurado;
   - cliente sem a raiz recusado;
   - HTTP sem conteúdo e porta 80 fechada.
+- `./deployment/offline/tests/lan-https-only.tests.ps1 -Image <imagem>`: o HTTP sai do endereço da LAN, o HTTPS fica, e o `-Undo` desfaz.
 - `./deployment/offline/tests/enable-https.tests.ps1 -Image <imagem>`:
   - o Kavita não é recriado;
   - a raiz é exportada;

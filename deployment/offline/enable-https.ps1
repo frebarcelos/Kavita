@@ -18,9 +18,14 @@ $authority = '/data/caddy/pki/authorities/local'
 $volume = "${Project}_https-data"
 function Fail([string]$message) { Write-Error $message -ErrorAction Stop }
 
-$address = (Get-Content -LiteralPath $EnvFile | Where-Object { $_ -match '^KAVITA_BIND_ADDRESS=' }) -replace '^KAVITA_BIND_ADDRESS=', ''
-if (-not $address -or $address -in '0.0.0.0', '::') { Fail "KAVITA_BIND_ADDRESS in $EnvFile must be 127.0.0.1 or the private LAN address." }
-$port = (Get-Content -LiteralPath $EnvFile | Where-Object { $_ -match '^KAVITA_HTTPS_PORT=' }) -replace '^KAVITA_HTTPS_PORT=', ''
+function EnvValue([string]$name) {
+    (Get-Content -LiteralPath $EnvFile | Where-Object { $_ -match "^$name=" }) -replace "^$name=", ''
+}
+# The same address compose.https.yaml publishes on
+$address = EnvValue 'KAVITA_HTTPS_BIND_ADDRESS'
+if (-not $address) { $address = EnvValue 'KAVITA_BIND_ADDRESS' }
+if (-not $address -or $address -in '0.0.0.0', '::') { Fail "The HTTPS address in $EnvFile must be 127.0.0.1 or the private LAN address." }
+$port = EnvValue 'KAVITA_HTTPS_PORT'
 if (-not $port) { $port = '5443' }
 # Kavita's image has curl and a shell for the helper steps below
 $image = (docker @compose config --format json 2>$null | ConvertFrom-Json).services.kavita.image

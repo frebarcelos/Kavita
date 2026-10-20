@@ -4,8 +4,9 @@ param(
     [string]$Project = 'kavita-offline-f1',
     [string]$EnvFile = '_temp/offline-f1/.env',
     [string]$Override = '_temp/offline-f1/compose.libraries.yaml',
-    # The address the server must stay published on: the private LAN address, never 0.0.0.0
-    [string]$BindAddress = '192.168.1.113',
+    # The address the server must stay published on: KAVITA_BIND_ADDRESS of the env file by default (the private LAN
+    # address, or 127.0.0.1 once lan-https-only.ps1 leaves the LAN to the HTTPS proxy), never 0.0.0.0
+    [string]$BindAddress = '',
     # Copies of the configuration taken before each deploy; outside the Docker volumes
     [string]$BackupRoot = '_temp/offline-f1/deploys',
     # Checkpoints (volumes and archives) kept, the newest first
@@ -19,6 +20,10 @@ $ErrorActionPreference = 'Stop'
 # it to be healthy; if it does not get healthy, puts the previous override back and starts the previous image again.
 # The library is never touched: it stays mounted read-only by the Compose files.
 
+if (-not $BindAddress) {
+    $BindAddress = (Get-Content -LiteralPath $EnvFile | Where-Object { $_ -match '^KAVITA_BIND_ADDRESS=' }) -replace '^KAVITA_BIND_ADDRESS=', ''
+}
+if (-not $BindAddress -or $BindAddress -in '0.0.0.0', '::') { throw "KAVITA_BIND_ADDRESS must be 127.0.0.1 or the private LAN address, not '$BindAddress'." }
 $container = "$Project-kavita-1"
 $composeBase = @('compose', '-p', $Project, '--env-file', $EnvFile, '-f', 'deployment/offline/compose.yaml', '-f')
 $checkpointLabel = "kavita.fork.checkpoint=$Project"
