@@ -47,7 +47,8 @@ public class ReaderController(ICacheService cacheService,
     IScrobblingService scrobblingService,
     ILocalizationService localizationService,
     IBookService bookService,
-    ProgressWriteThrottle progressWriteThrottle) : BaseApiController
+    ProgressWriteThrottle progressWriteThrottle,
+    IPdfPageCache pdfPageCache) : BaseApiController
 {
 
     /// <summary>
@@ -99,6 +100,12 @@ public class ReaderController(ICacheService cacheService,
 
         try
         {
+            // Fork: a PDF read as images (book mode) is rendered one page at a time, not the whole document first
+            if (extractPdf && await pdfPageCache.GetPagePathAsync(chapterId, page, ct) is { } pdfPage)
+            {
+                return CachedFile(pdfPage, maxAge: TimeSpan.FromHours(1).Seconds);
+            }
+
             var chapter = await cacheService.Ensure(chapterId, extractPdf, ct);
             if (chapter == null) return NotFound();
 
@@ -183,6 +190,10 @@ public class ReaderController(ICacheService cacheService,
     {
         var ct = HttpContext.RequestAborted;
         if (chapterId <= 0) return ArraySegment<FileDimensionDto>.Empty;
+        if (extractPdf && await pdfPageCache.GetDimensionsAsync(chapterId, ct) is { } pdfDimensions)
+        {
+            return Ok(pdfDimensions);
+        }
         var chapter = await cacheService.Ensure(chapterId, extractPdf, ct);
         if (chapter == null) return NotFound();
 
@@ -204,7 +215,10 @@ public class ReaderController(ICacheService cacheService,
     {
         var ct = HttpContext.RequestAborted;
         if (chapterId <= 0) return Ok(null); // This can happen occasionally from UI, we should just ignore
-        var chapter = await cacheService.Ensure(chapterId, extractPdf, ct);
+        // Fork: a PDF read as images (book mode) is not rendered here; its pages are, one by one, when asked for
+        var chapter = await unitOfWork.ChapterRepository.GetChapterAsync(chapterId, ct: ct);
+        var pagesOnDemand = extractPdf && pdfPageCache.Handles(chapter);
+        if (!pagesOnDemand) chapter = await cacheService.Ensure(chapterId, extractPdf, ct);
         if (chapter == null) return NotFound();
 
         var dto = await unitOfWork.ChapterRepository.GetChapterInfoDtoAsync(chapterId, ct);
@@ -239,7 +253,9 @@ public class ReaderController(ICacheService cacheService,
 
         if (includeDimensions)
         {
-            info.PageDimensions = cacheService.GetCachedFileDimensions(cacheService.GetCachePath(chapterId));
+            info.PageDimensions = pagesOnDemand
+                ? await pdfPageCache.GetDimensionsAsync(chapterId, ct) ?? []
+                : cacheService.GetCachedFileDimensions(cacheService.GetCachePath(chapterId));
             info.DoublePairs = readerService.GetPairs(info.PageDimensions);
         }
 

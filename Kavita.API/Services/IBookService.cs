@@ -37,6 +37,15 @@ public interface IBookService
     /// <param name="fileFilePath"></param>
     /// <param name="targetDirectory">Where the files will be extracted to. If doesn't exist, will be created.</param>
     void ExtractPdfImages(string fileFilePath, string targetDirectory);
+    /// <summary>
+    /// Fork (book mode on PDF): the size of every page as <see cref="ExtractPdfImages"/> renders it, without rendering
+    /// </summary>
+    IList<FileDimensionDto> GetPdfPageDimensions(string fileFilePath);
+    /// <summary>
+    /// Fork (book mode on PDF): renders one page (from 0) into targetDirectory as Page-{n}.png, unless it is already
+    /// there, and returns its path; null for a page outside the document. The rest of the document is not rendered.
+    /// </summary>
+    string? GetPdfPageImage(string fileFilePath, int pageNumber, string targetDirectory);
     Task<ICollection<BookChapterItem>> GenerateTableOfContents(Chapter chapter, CancellationToken ct = default);
     /// <summary>
     /// This returns a single page within the epub book. All html will be rewritten to be scoped within our reader,

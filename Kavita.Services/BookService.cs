@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Collections.Concurrent;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -1553,6 +1554,73 @@ public partial class BookService(
             stream.Seek(0, SeekOrigin.Begin);
             stream.CopyTo(fileStream);
         });
+    }
+
+    public IList<FileDimensionDto> GetPdfPageDimensions(string fileFilePath)
+    {
+        // Opening a page measures it at the render size; only GetImage draws it
+        using var docReader = DocLib.Instance.GetDocReader(fileFilePath, PdfRenderDimensions());
+        var pages = docReader.GetPageCount();
+        var dimensions = new List<FileDimensionDto>(pages);
+        for (var pageNumber = 0; pageNumber < pages; pageNumber++)
+        {
+            using var pageReader = docReader.GetPageReader(pageNumber);
+            var width = pageReader.GetPageWidth();
+            var height = pageReader.GetPageHeight();
+            dimensions.Add(new FileDimensionDto
+            {
+                PageNumber = pageNumber,
+                Width = width,
+                Height = height,
+                IsWide = width > height,
+                FileName = $"Page-{pageNumber}.png",
+            });
+        }
+
+        return dimensions;
+    }
+
+    public string? GetPdfPageImage(string fileFilePath, int pageNumber, string targetDirectory)
+    {
+        if (pageNumber < 0) return null;
+        var outputPath = Path.Combine(targetDirectory, $"Page-{pageNumber}.png");
+        if (File.Exists(outputPath)) return outputPath;
+
+        // The reader asks for the pages around the current one together: each page is drawn once
+        var pageLock = PdfPageLocks.GetOrAdd(outputPath, _ => new object());
+        lock (pageLock)
+        {
+            if (File.Exists(outputPath)) return outputPath;
+
+            using var docReader = DocLib.Instance.GetDocReader(fileFilePath, PdfRenderDimensions());
+            if (pageNumber >= docReader.GetPageCount()) return null;
+
+            directoryService.ExistOrCreate(targetDirectory);
+            using var stream = StreamManager.GetStream("BookService.GetPdfPageImage");
+            GetPdfPage(docReader, pageNumber, stream);
+
+            // Written aside and moved, so a page is never read half written
+            var partial = outputPath + ".partial";
+            using (var fileStream = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 81920))
+            {
+                stream.Seek(0, SeekOrigin.Begin);
+                stream.CopyTo(fileStream);
+            }
+            File.Move(partial, outputPath, overwrite: true);
+        }
+
+        PdfPageLocks.TryRemove(outputPath, out _);
+        return outputPath;
+    }
+
+    private static readonly ConcurrentDictionary<string, object> PdfPageLocks = new();
+
+    /// <summary>The page size ExtractPdfImages renders at, from the server's PDF render resolution</summary>
+    private PageDimensions PdfRenderDimensions()
+    {
+        var settings = unitOfWork.SettingsRepository.GetSettingsDtoAsync().GetAwaiter().GetResult();
+        var dims = settings.PdfRenderResolution.GetDimensions();
+        return new PageDimensions(dims.dim1, dims.dim2);
     }
 
     /// <summary>
