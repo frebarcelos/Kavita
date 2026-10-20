@@ -141,7 +141,11 @@ O override local `compose.libraries.yaml` aponta a imagem em uso e o volume exte
 Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois scripts versionados. Execute a partir da raiz do checkout.
 
 1. **Build:** `./deployment/offline/build-fork-image.ps1`.
-   - Recusa árvore com alterações.
+   - Recusa árvore com alterações. Com trabalho não commitado no checkout, gere a imagem de um worktree limpo do commit:
+     - `git worktree add --detach _temp/build-worktree HEAD`;
+     - ligue o `node_modules` do checkout com `New-Item -ItemType Junction -Path _temp\build-worktree\UI\Web\node_modules -Target (Resolve-Path UI\Web\node_modules)`. O `npm ci` recusa o lock do upstream; os `package*.json` precisam ser iguais aos do commit;
+     - rode o script de dentro do worktree;
+     - no fim, remova a junção só com `cmd /c rmdir`. Uma exclusão recursiva segue a junção e apagaria o `node_modules` do checkout.
    - Publica o backend no container do SDK .NET e faz o build de produção da interface.
    - Gera `kavita-fork:<git describe>` com o SHA do commit em `org.opencontainers.image.revision`.
    - O [Dockerfile.fork](Dockerfile.fork) apaga os arquivos da 0.9.1 em `/kavita` (exceto `config/`) antes de copiar o publish do fork.

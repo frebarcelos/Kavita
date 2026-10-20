@@ -30,6 +30,7 @@ Atualizado em 2026-10-20. Cada item foi feito com TDD; a evidência é o commit 
 | 1.7 | Feito: uma gravação a cada 300 ms por usuário e capítulo | Kavita `528fbc3` |
 | 1.8 | Feito: leitor web grava depois de 500 ms na página | Kavita `c3c31ba` |
 | 2.x | Feito no Kover: novas tentativas, cancelamento sem regravar, falha visível, selos por estado, checagem de espaço e serviço em primeiro plano. Aceite no S6 Lite em 2026-10-20: selos na tela inicial; download concluído com o app em segundo plano e o serviço parando sozinho; pedido da permissão de notificação e notificação publicada; remover a cópia manteve o "Continuar lendo" | Kover `8760436`, `59e4298`, `d2f5924`, `9a05513`, `e05612f`, `4a7ea0e`; 397 testes |
+| 3.2 | Feito: "Configurações" mostra a versão com o `git describe` do build (`tool/build_apk.ps1`). No S6 Lite: `v1.0.0 (1) · edcddfc` | Kover `edcddfc`; 399 testes |
 | 4.1–4.3 | Feito: pasta ou arquivo renomeado e biblioteca montada em outro caminho mantêm série, capítulos, progresso e capa. Cópia ou caso ambíguo vira série nova | Kavita `0b7aeae`, `ff4d1f5` |
 | 4.4 | Feito: capas de pasta acompanham a troca de raízes da biblioteca | Kavita `f219a9e` |
 | 4.5 | Conferido: já tratado no código | — |
@@ -47,7 +48,7 @@ Medição do 4.8 (2026-10-20, container do SDK com 4 CPUs, SQLite em arquivo tem
 
 Com 20 mil arquivos, o scan sem mudança gasta quase todo o tempo na varredura e comparação dos arquivos, que é código do upstream. O acervo atual tem cerca de 934 arquivos. Para repetir: `KAVITA_BENCH_FOLDERS=2000` e `KAVITA_BENCH_OUT=<arquivo>` no teste `FolderOrganizationScanBenchmark`; `KAVITA_BENCH_CLASSIC=1` mede sem a organização por pastas.
 
-Imagem do servidor com tudo acima: `kavita-fork:fork-v1.1-5-g528fbc3e7`. Suítes: serviços 3.032 aprovados (sem falhas), servidor 110/110, web 78/78, Kover 370/370 e `flutter analyze` limpo.
+Imagem no principal: `kavita-fork:fork-v1.1-5-g528fbc3e7` (até o item 1.8). Imagem gerada com a fase 4, **aguardando o deploy pelo usuário**: `kavita-fork:fork-v1.1-16-g43a4ec98b`, sem migração de banco. Suítes em 2026-10-20: serviços 3.037 aprovados (sem falhas), servidor 113/113, banco 99/99, web 78/78, Kover 399/399 e `flutter analyze` limpo.
 
 ## Como ler
 
