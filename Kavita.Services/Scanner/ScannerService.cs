@@ -675,6 +675,8 @@ public class ScannerService(
         {
             logger.LogDebug("[ScannerService] Library {LibraryName} Step 5: Remove Deleted Series", library.Name);
             tally.SeriesRemoved += await RemoveSeriesNotFound(parsedSeries, library);
+            // Fork: references a stopped scan may have left on an old volume
+            await unitOfWork.VolumeRepository.RepairChapterReferenceVolumeIdsAsync(library.Id);
 
             if (!tally.HasChanges)
             {

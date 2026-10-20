@@ -409,6 +409,29 @@ public class FolderOrganizationScanTests(ITestOutputHelper output) : AbstractDbT
         Assert.Empty(after.Intersect(before));
     }
 
+    [Fact]
+    public async Task Scan_RepairsProgressLeftPointingAtAnotherVolume()
+    {
+        var (uow, context, _) = await CreateDatabase();
+        var helper = new ScannerHelper(uow, output);
+        var library = await helper.GenerateScannerData("Volume Repair - Manga",
+            ["Series/Alpha v01.cbz", "Series/Beta v02.cbz"], Sized("Alpha v01.cbz", "Beta v02.cbz"));
+        library.FolderBasedOrganization = true;
+        await uow.CommitAsync();
+        var scanner = helper.CreateServices();
+        await scanner.ScanLibrary(library.Id);
+        var progress = await ReadOn(context, library.Id, "Alpha v01.cbz");
+        var otherVolume = await context.Volume.Where(v => v.Id != progress.VolumeId && v.Series.LibraryId == library.Id)
+            .Select(v => v.Id).FirstAsync();
+        // An interrupted scan moved the chapter but not the progress that points at it
+        await context.AppUserProgresses.ExecuteUpdateAsync(s => s.SetProperty(p => p.VolumeId, otherVolume));
+
+        await scanner.ScanLibrary(library.Id, true);
+
+        var chapterVolume = await context.Chapter.Where(c => c.Id == progress.ChapterId).Select(c => c.VolumeId).SingleAsync();
+        Assert.Equal(chapterVolume, (await context.AppUserProgresses.AsNoTracking().SingleAsync()).VolumeId);
+    }
+
     private static async Task<Dictionary<string, Placement>> Placements(DataContext context, int libraryId) =>
         await context.MangaFile.Where(f => f.Chapter.Volume.Series.LibraryId == libraryId)
             .Select(f => new { f.FilePath, Placement = new Placement(f.Chapter.Volume.SeriesId, f.Chapter.VolumeId, f.ChapterId) })

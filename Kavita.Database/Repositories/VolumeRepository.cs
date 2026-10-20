@@ -65,6 +65,22 @@ public class VolumeRepository(DataContext context, IMapper mapper) : IVolumeRepo
                 a => context.Chapter.Where(c => c.Id == a.ChapterId).Select(c => c.VolumeId).First()), ct);
     }
 
+    public async Task RepairChapterReferenceVolumeIdsAsync(int libraryId, CancellationToken ct = default)
+    {
+        await context.AppUserProgresses
+            .Where(p => p.LibraryId == libraryId && context.Chapter.Any(c => c.Id == p.ChapterId && c.VolumeId != p.VolumeId))
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.VolumeId,
+                p => context.Chapter.Where(c => c.Id == p.ChapterId).Select(c => c.VolumeId).First()), ct);
+        await context.AppUserTableOfContent
+            .Where(t => t.LibraryId == libraryId && context.Chapter.Any(c => c.Id == t.ChapterId && c.VolumeId != t.VolumeId))
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.VolumeId,
+                t => context.Chapter.Where(c => c.Id == t.ChapterId).Select(c => c.VolumeId).First()), ct);
+        await context.AppUserAnnotation
+            .Where(a => a.LibraryId == libraryId && context.Chapter.Any(c => c.Id == a.ChapterId && c.VolumeId != a.VolumeId))
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.VolumeId,
+                a => context.Chapter.Where(c => c.Id == a.ChapterId).Select(c => c.VolumeId).First()), ct);
+    }
+
     /// <summary>
     /// Returns a list of non-tracked files for a given volume.
     /// </summary>

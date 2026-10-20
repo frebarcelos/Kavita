@@ -39,6 +39,11 @@ public interface IVolumeRepository
     /// </summary>
     /// <remarks>Call after saving, once the chapters' new volumes have ids</remarks>
     Task SyncChapterReferenceVolumeIdsAsync(IReadOnlyCollection<int> chapterIds, CancellationToken ct = default);
+    /// <summary>
+    /// Fork: points progress, table of contents and annotations of the library at their chapter's volume again,
+    /// in case a scan stopped between moving a chapter and updating them. Idempotent.
+    /// </summary>
+    Task RepairChapterReferenceVolumeIdsAsync(int libraryId, CancellationToken ct = default);
     Task<IList<MangaFile>> GetFilesForVolume(int volumeId, CancellationToken ct = default);
     Task<string?> GetVolumeCoverImageAsync(int volumeId, CancellationToken ct = default);
     Task<List<int>> GetChapterIdsByVolumeIds(int seriesId, IReadOnlyList<int> volumeIds, CancellationToken ct = default);
