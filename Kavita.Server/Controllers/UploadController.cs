@@ -423,6 +423,8 @@ public class UploadController : BaseApiController
             if (existing == null) return Ok();
             _unitOfWork.LibraryRepository.Remove(existing);
             await _unitOfWork.CommitAsync(ct);
+            // The file goes with the record; no cleanup task knows folder covers
+            _directoryService.DeleteFiles([Path.Join(_directoryService.CoverImageDirectory, existing.CoverImage)]);
             return Ok();
         }
 

@@ -23,6 +23,7 @@ public class FolderCoverUploadTests
     private const int LibraryId = 3;
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IImageService _images = Substitute.For<IImageService>();
+    private readonly IDirectoryService _directories = Substitute.For<IDirectoryService>();
 
     private UploadController CreateController(FolderCover? existing = null)
     {
@@ -36,7 +37,7 @@ public class FolderCoverUploadTests
         var user = Substitute.For<IUserContext>();
         user.GetUserIdOrThrow().Returns(1);
         return new UploadController(_uow, _images, Substitute.For<ILogger<UploadController>>(),
-            Substitute.For<ITaskScheduler>(), Substitute.For<IDirectoryService>(), Substitute.For<IEventHub>(),
+            Substitute.For<ITaskScheduler>(), _directories, Substitute.For<IEventHub>(),
             Substitute.For<IReadingListService>(), Substitute.For<ILocalizationService>(),
             Substitute.For<ICoverDbService>(), Substitute.For<IUrlValidationService>())
         {
@@ -106,5 +107,17 @@ public class FolderCoverUploadTests
         Assert.IsType<OkResult>(result);
         _uow.LibraryRepository.Received(1).Remove(existing);
         await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UploadFolderCover_RemovingTheCoverDeletesItsFile()
+    {
+        _directories.CoverImageDirectory.Returns("/covers");
+        var existing = new FolderCover { LibraryId = LibraryId, Path = "Elric", CoverImage = "fldr3_x.webp" };
+
+        await CreateController(existing).UploadFolderCover(new UploadFolderCoverDto { LibraryId = LibraryId, Path = "Elric" });
+
+        _directories.Received(1).DeleteFiles(Arg.Is<IEnumerable<string>>(files =>
+            files.Single() == Path.Join("/covers", "fldr3_x.webp")));
     }
 }
