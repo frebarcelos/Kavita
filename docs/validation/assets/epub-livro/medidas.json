@@ -1,0 +1,36 @@
+[
+  {
+    "layout": 1,
+    "direction": 0,
+    "book": false,
+    "responseMs": 8,
+    "saves": 2
+  },
+  {
+    "layout": 1,
+    "direction": 1,
+    "book": false,
+    "responseMs": 9,
+    "saves": 2
+  },
+  {
+    "layout": 2,
+    "direction": 0,
+    "book": false,
+    "responseMs": 8,
+    "saves": 2
+  },
+  {
+    "layout": 2,
+    "direction": 1,
+    "book": false,
+    "responseMs": 9,
+    "saves": 2
+  },
+  {
+    "book": true,
+    "responseMs": 8,
+    "savesIncludingReopen": 3,
+    "saves": 2
+  }
+]

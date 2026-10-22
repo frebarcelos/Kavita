@@ -1,0 +1,34 @@
+[
+  {
+    "fixture": "synthetic",
+    "elements": 92,
+    "columns": 2,
+    "samples": [
+      2.5,
+      1.6,
+      1.4,
+      1.1,
+      1.1
+    ],
+    "maxMs": 2.5,
+    "geometryMismatches": 0,
+    "differences": [],
+    "sourceOffsetPreserved": true
+  },
+  {
+    "fixture": "publisher-css",
+    "elements": 97,
+    "columns": 2,
+    "samples": [
+      1.1,
+      1.4,
+      1.3,
+      1.2,
+      1.3
+    ],
+    "maxMs": 1.4,
+    "geometryMismatches": 0,
+    "differences": [],
+    "sourceOffsetPreserved": true
+  }
+]

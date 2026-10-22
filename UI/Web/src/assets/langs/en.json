@@ -1462,6 +1462,7 @@
     },
 
     "book-reader": {
+        "book-mode": "Book",
         "page-label": "Page",
         "skip-header": "Skip to main content",
         "loading-book": "Loading book…",

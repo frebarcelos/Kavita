@@ -1,0 +1,63 @@
+[
+  {
+    "label": "synthetic",
+    "htmlIndex": 0,
+    "largestHtmlChars": 0,
+    "elements": 92,
+    "columns": 2,
+    "samples": [
+      2.2,
+      0.8,
+      0.9,
+      0.6,
+      0.8
+    ],
+    "maxMs": 2.2,
+    "geometryMismatches": 0,
+    "differences": [],
+    "sourceOffsetPreserved": true
+  },
+  {
+    "label": "largest-epub",
+    "htmlIndex": 23,
+    "largestHtmlChars": 183302,
+    "elements": 3049,
+    "columns": 2,
+    "samples": [
+      14.8,
+      12.9,
+      13.3,
+      14.2,
+      11.4
+    ],
+    "maxMs": 14.8,
+    "geometryMismatches": 0,
+    "differences": [],
+    "sourceOffsetPreserved": true,
+    "animation": {
+      "started": true,
+      "finished": true,
+      "responseMs": 652,
+      "saves": 1,
+      "htmlIndexPreserved": true
+    }
+  },
+  {
+    "label": "publisher-css",
+    "htmlIndex": 0,
+    "largestHtmlChars": 0,
+    "elements": 97,
+    "columns": 2,
+    "samples": [
+      1,
+      1,
+      1.1,
+      1.1,
+      1.4
+    ],
+    "maxMs": 1.4,
+    "geometryMismatches": 0,
+    "differences": [],
+    "sourceOffsetPreserved": true
+  }
+]

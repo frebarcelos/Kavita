@@ -152,23 +152,23 @@
                 <div class="btn-group d-flex justify-content-center" role="group" [attr.aria-label]="t('layout-mode-label')">
                   <input
                     type="radio" name="layoutMode" class="btn-check" id="layout-mode-default" autocomplete="off"
-                    [checked]="settingsForm.bookReaderLayoutMode().value() === BookPageLayoutMode.Default"
-                    (change)="settingsForm.bookReaderLayoutMode().value.set(BookPageLayoutMode.Default)"
+                    [checked]="layoutMode() === BookPageLayoutMode.Default"
+                    (change)="readerSettingsService().updateLayoutMode(BookPageLayoutMode.Default)"
                   >
                   <label class="btn btn-outline-primary" for="layout-mode-default">{{ t('layout-mode-option-scroll') }}</label>
 
                   <input
                     type="radio" name="layoutMode" class="btn-check" id="layout-mode-col1" autocomplete="off"
-                    [checked]="settingsForm.bookReaderLayoutMode().value() === BookPageLayoutMode.Column1"
-                    (change)="settingsForm.bookReaderLayoutMode().value.set(BookPageLayoutMode.Column1)"
+                    [checked]="layoutMode() === BookPageLayoutMode.Column1"
+                    (change)="readerSettingsService().updateLayoutMode(BookPageLayoutMode.Column1)"
                   >
                   <label class="btn btn-outline-primary" for="layout-mode-col1">{{ t('layout-mode-option-1col') }}</label>
 
                   @if (writingStyle() === WritingStyle.Horizontal) {
                     <input
                       type="radio" name="layoutMode" class="btn-check" id="layout-mode-col2" autocomplete="off"
-                      [checked]="settingsForm.bookReaderLayoutMode().value() === BookPageLayoutMode.Column2"
-                      (change)="settingsForm.bookReaderLayoutMode().value.set(BookPageLayoutMode.Column2)"
+                      [checked]="layoutMode() === BookPageLayoutMode.Column2"
+                      (change)="readerSettingsService().updateLayoutMode(BookPageLayoutMode.Column2)"
                     >
                     <label class="btn btn-outline-primary" for="layout-mode-col2">{{ t('layout-mode-option-2col') }}</label>
                   }

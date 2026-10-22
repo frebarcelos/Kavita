@@ -74,6 +74,8 @@ import {opensInOtherReader} from "../../../_helpers/reader-format";
 import {PageStyle} from "../reader-settings/reader-settings.component";
 import {BookTheme} from "../../../_models/preferences/book-theme";
 import {Stack} from "../../../shared/data-structures/stack";
+import {EpubBookDecorationComponent} from '../epub-book-decoration/epub-book-decoration.component';
+import {EpubBookAnimationComponent} from '../epub-book/epub-book-animation.component';
 
 
 interface HistoryPoint {
@@ -136,7 +138,7 @@ const KEYBIND_TARGETS = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgTemplateOutlet, NgStyle, NgClass, NgbTooltip,
     BookLineOverlayComponent, TranslocoDirective, ColumnLayoutClassPipe,
-    WritingStyleClassPipe, ReadTimeLeftPipe, PercentPipe, NgxSliderModule],
+    WritingStyleClassPipe, ReadTimeLeftPipe, PercentPipe, NgxSliderModule, EpubBookDecorationComponent, EpubBookAnimationComponent],
   providers: [EpubReaderSettingsService, LayoutMeasurementService],
 })
 export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, AfterViewChecked {
@@ -347,6 +349,11 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
    * Used to keep track of direction user is paging, to help with virtual paging on column layout
    */
   pagingDirection: PAGING_DIRECTION = PAGING_DIRECTION.FORWARD;
+  private pagingRevision = 0;
+  /** Fork (L3): text anchor whose restoration after an appearance change is still waiting for the next frame */
+  private pendingAnchorRestore: {selector: string | null, text: Range | null, cancel: () => void} | null = null;
+  protected readonly bookAnimation = viewChild(EpubBookAnimationComponent);
+  private lastBookWheel = -Infinity;
 
   /**
    * When the user is highlighting something, then we remove pagination
@@ -399,6 +406,10 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   protected readonly readingDirection = this.readerSettingsService.readingDirection;
   protected readonly writingStyle = this.readerSettingsService.writingStyle;
   protected readonly clickToPaginate = this.readerSettingsService.clickToPaginate;
+  protected readonly bookModeActive = this.readerSettingsService.bookModeActive;
+  protected readonly bookModeAvailable = this.readerSettingsService.bookModeAvailable;
+  protected readonly bookTwoPages = computed(() => this.layoutMode() === BookPageLayoutMode.Column2);
+  protected readonly bookColumnGap = computed(() => this.bookModeActive() && this.bookTwoPages() ? 64 : COLUMN_GAP);
 
   protected columnWidth!: Signal<string>;
   protected columnHeight!: Signal<string>;
@@ -876,6 +887,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
       }
 
     }
+    if (this.bookModeActive()) this.cdRef.markForCheck();
   }
 
   saveProgress() {
@@ -1127,6 +1139,13 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   }
 
   onWheel(event: WheelEvent) {
+    if (this.bookModeActive() && event.deltaY !== 0) {
+      event.preventDefault();
+      const now = performance.now(), previous = this.lastBookWheel;
+      this.lastBookWheel = now;
+      if (now - previous >= 180) this.movePage(event.deltaY > 0 ? PAGING_DIRECTION.FORWARD : PAGING_DIRECTION.BACKWARDS);
+      return;
+    }
     // This allows the user to scroll the page horizontally without holding shift
     if (this.layoutMode() !== BookPageLayoutMode.Default || this.writingStyle() !== WritingStyle.Vertical) {
       return;
@@ -1316,6 +1335,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   }
 
   loadPage(part?: string | undefined, scrollTop?: number | undefined) {
+    this.bookAnimation?.()?.cancel();
 
     this.isLoading.set(true);
     this.cdRef.markForCheck();
@@ -1472,13 +1492,12 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
         maxWidth = `${this.getVerticalPageWidth()}px`;
         break
       case BookPageLayoutMode.Column2: {
-        maxWidth = `${this.getVerticalPageWidth()}px`;
         if (isVerticalWritingStyle && !this.isSingleImagePage)  {
           maxHeight = `${height / 2}px`;
         } else {
           maxHeight = `${height}px`;
         }
-        maxWidth = `${(this.getVerticalPageWidth() / 2) - (COLUMN_GAP / 2)}px`;
+        maxWidth = `${(this.getVerticalPageWidth() / 2) - (this.bookColumnGap() / 2)}px`;
         break
       }
     }
@@ -1625,7 +1644,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     }
 
     const pageSize = this.pageSize();
-    let [_, totalScroll] = this.getScrollOffsetAndTotalScroll();
+    let [, totalScroll] = this.getScrollOffsetAndTotalScroll();
 
     if (oldEmptyGap) totalScroll -= pageSize/2;
     const lastPageSize = totalScroll % pageSize;
@@ -1665,14 +1684,23 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
    * @param direction Direction to move
    */
   movePage(direction: PAGING_DIRECTION) {
-    switch (direction) {
-      case PAGING_DIRECTION.BACKWARDS:
-        this.prevPage();
-        break;
-      case PAGING_DIRECTION.FORWARD:
-        this.nextPage();
-        break;
+    this.flushAnchorRestore();
+    this.pagingRevision++;
+    const commit = () => {
+      if (direction === PAGING_DIRECTION.BACKWARDS) this.prevPage();
+      else this.nextPage();
+    };
+    if (this.bookModeActive()) {
+      if (this.bookAnimation()?.isTurning) return;
+      const [current, total, stride] = this.getVirtualPage();
+      const target = current + (direction === PAGING_DIRECTION.FORWARD ? 1 : -1);
+      if (target >= 1 && target <= total && this.bookAnimation()?.turn({
+        source: this.bookContentElemRef().nativeElement, area: this.bookContainerElemRef().nativeElement,
+        current: current - 1, target: target - 1, stride, columns: this.bookTwoPages() ? 2 : 1,
+        rightToLeft: this.readingDirection() === ReadingDirection.RightToLeft,
+      }, commit)) return;
     }
+    commit();
   }
 
   prevPage() {
@@ -1788,7 +1816,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     const columnGapModifier = this.columnGapModifier();
     if (this.readingSectionElemRef() == null) return 0;
 
-    return this.reader().nativeElement.offsetWidth - margin + (COLUMN_GAP * columnGapModifier);
+    return this.reader().nativeElement.offsetWidth - margin + (this.bookColumnGap() * columnGapModifier);
   });
 
   columnGapModifier = computed(() => {
@@ -1838,7 +1866,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
     const totalVirtualPages = Math.max(1, Math.ceil(totalScroll / pageSize));
     const delta = totalScroll - scrollOffset;
-    let currentVirtualPage = 1;
+    let currentVirtualPage: number;
 
     //If first virtual page, i.e. totalScroll and delta are the same value
     if (totalScroll === delta) {
@@ -1911,7 +1939,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
     if (intersectingEntries.length > 0) {
       const element = this.findTopLevelElement(intersectingEntries[0], intersectingEntries[1], bookContentElement);
-      let path = this.readerService.getXPathTo(element);
+      const path = this.readerService.getXPathTo(element);
       if (path === '') return;
 
       resumeElement = path;
@@ -1951,10 +1979,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     if (target.parentElement === nextSibling.parentElement) return target;
 
     const ancestors: Element[] = [];
-    let current: Element | null = null
-
     // Collect all parent element from the next sibling
-    current = nextSibling.parentElement;
+    let current: Element | null = nextSibling.parentElement;
     while (current && current !== root) {
       ancestors.push(current);
       current = current.parentElement;
@@ -1963,7 +1989,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     // Traverse up from target to find the similar parent with nextSibling
     current = target;
     while (current && current !== root) {
-      let parent: Element | null = current.parentElement;
+      const parent: Element | null = current.parentElement;
 
       if (parent && ancestors.includes(parent)) {
         return current;
@@ -2040,11 +2066,18 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
    * Note: This has a critical role when margin changes and 2 column layout is in play
    */
   applyPageStyles(pageStyles: PageStyle) {
+    this.bookAnimation?.()?.cancel();
+    const pagingRevision = this.pagingRevision;
     const bookContentElemRef = this.bookContentElemRef();
     if (bookContentElemRef === undefined || !bookContentElemRef.nativeElement) return;
 
     // Before we apply styles, let's get an element on the screen so we can scroll to it after any shifts
-    const resumeElement: string | null | undefined = this.getFirstVisibleElementXPath();
+    // Fork (L3): a restoration still pending keeps its anchor, the screen has not been restored to it yet
+    const pendingAnchor = this.pendingAnchorRestore;
+    this.pendingAnchorRestore = null;
+    pendingAnchor?.cancel();
+    const resumeElement = (pendingAnchor ? pendingAnchor.selector : this.getFirstVisibleElementXPath()) || null;
+    const resumeText = pendingAnchor ? pendingAnchor.text : this.getFirstVisibleTextRange();
 
     // Needs to update the image size when reading mode is vertically
     this.updateImageSizes();
@@ -2090,21 +2123,96 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
     // After layout shifts, we need to refocus the scroll bar
     // NOTE: THis is called almost always and not just from layout shift
-    if (this.layoutMode() !== BookPageLayoutMode.Default && resumeElement !== null && resumeElement !== undefined) {
+    // Fork (L3): text alone is enough; during an interrupted turn no element is entirely on screen
+    if (this.layoutMode() !== BookPageLayoutMode.Default && (resumeElement || resumeText)) {
       this.updateWidthAndHeightCalcs();
       this.updateImageSizes(); // Re-call this as we will change window width/height again
 
-      requestAnimationFrame(() => {
+      const frame = requestAnimationFrame(() => {
+        this.pendingAnchorRestore = null;
         this.addEmptyPageIfRequired(); // Try add after layout updated on next frame
 
         // When the user switches pages, there may be a pending scroll that moves to the start or end of the page
         // For example, `this.scrollWithinPage(...)` might be triggered when the user presses the prev/next page button
         // So, we don't need to do another page scroll here
-        if (!this.hasDelayedScroll) {
-          this.scrollTo(resumeElement);
+        if (!this.hasDelayedScroll && pagingRevision === this.pagingRevision) {
+          if (resumeText) afterFrame(() => this.alignToSpread(resumeText) || (resumeElement && this.scrollTo(resumeElement)));
+          else if (resumeElement) this.scrollTo(resumeElement);
         }
       });
+      this.pendingAnchorRestore = {selector: resumeElement, text: resumeText, cancel: () => cancelAnimationFrame(frame)};
     }
+  }
+
+  /**
+   * Fork (L3): a page command that arrives before the deferred restoration first moves to the anchor's column,
+   * so it advances from the text the user was reading instead of the offset left by the old typography.
+   */
+  private flushAnchorRestore() {
+    const pending = this.pendingAnchorRestore;
+    if (!pending) return;
+    this.pendingAnchorRestore = null;
+    pending.cancel();
+    if (this.hasDelayedScroll || this.writingStyle() === WritingStyle.Vertical) return;
+
+    this.addEmptyPageIfRequired();
+    if (pending.text && this.alignToSpread(pending.text)) return;
+    const element = pending.selector ? this.getElementFromXPath(pending.selector) as HTMLElement | null : null;
+    if (element) this.alignToSpread(element);
+  }
+
+  /**
+   * Fork (L3): the character at the top of the first visible column. A paragraph can span several columns, so restoring
+   * its start after a reflow goes back, and the next capture then picks the previous paragraph: each change drifts back.
+   */
+  private getFirstVisibleTextRange(): Range | null {
+    if (this.layoutMode() === BookPageLayoutMode.Default || this.writingStyle() !== WritingStyle.Horizontal) return null;
+    const content = this.bookContentElemRef()?.nativeElement;
+    if (!content) return null;
+
+    // From text geometry, not a hit test: the settings drawer covers the reader while the user changes the appearance
+    const left = content.getBoundingClientRect().left - 1;
+    const range = this.document.createRange();
+    const walker = this.document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      if (!node.data.trim()) continue;
+      range.selectNodeContents(node);
+      const rects = range.getClientRects();
+      if (!rects.length || rects[rects.length - 1].right <= left) continue;
+
+      // Columns flow left to right, so the first character at or after the visible left edge is a binary search
+      let low = 0, high = node.length - 1;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        range.setStart(node, middle);
+        range.setEnd(node, middle + 1);
+        const rect = range.getClientRects()[0];
+        if (rect && rect.left >= left) high = middle;
+        else low = middle + 1;
+      }
+      range.setStart(node, low);
+      range.setEnd(node, low + 1);
+      return range;
+    }
+    return null;
+  }
+
+  /**
+   * Fork (L3): scrolls horizontal columns to the start of the page (or two-page spread) holding the target.
+   * scrollIntoView puts the element's own column at the left edge, which splits a spread when it is on the right page.
+   * @returns false when the target has no layout anymore, so the caller can fall back to the element
+   */
+  private alignToSpread(target: Element | Range) {
+    const content = this.bookContentElemRef()?.nativeElement;
+    const [, , pageSize] = this.getVirtualPage();
+    if (!content || pageSize <= 0) return false;
+    if (target instanceof Range && !content.contains(target.startContainer)) return false;
+
+    const rect = target.getClientRects()[0];
+    if (!rect) return false;
+    const position = rect.left - content.getBoundingClientRect().left + content.scrollLeft;
+    content.scrollLeft = Math.floor(Math.max(0, position) / pageSize) * pageSize;
+    return true;
   }
 
   /**
@@ -2112,6 +2220,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
    * @param theme
    */
   applyColorTheme(theme: BookTheme) {
+    this.bookAnimation?.()?.cancel();
     // Remove all themes
     Array.from(this.document.querySelectorAll('style[id^="brtheme-"]')).forEach(elem => elem.remove());
 
@@ -2161,6 +2270,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
       this.applyWritingStyle();
     }, { injector: injector });
     effect(() => {
+      this.bookColumnGap();
       this.applyLayoutMode(this.readerSettingsService.layoutMode(), true);
     }, { injector: injector });
     effect(() => {
@@ -2205,11 +2315,16 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     const layout = this.layoutMode();
     const writingStyle = this.writingStyle();
 
+    if (layout !== BookPageLayoutMode.Default && writingStyle === WritingStyle.Horizontal) {
+      afterFrame(() => this.alignToSpread(element));
+      return;
+    }
+
     if (layout !== BookPageLayoutMode.Default) {
       afterFrame(() => {
         // scrollIntoView method will only scroll to the visible area of the element (not including margin)
         // so we need to apply scroll-margin to that element to correctly scroll into it
-        let margin = window.getComputedStyle(element).margin;
+        const margin = window.getComputedStyle(element).margin;
         if(margin !== '0px') element.style.scrollMargin = margin;
 
         this.scrollService.scrollIntoView(element, {timeout, scrollIntoViewOptions: {'block': 'start', 'inline': 'start'}})
@@ -2235,7 +2350,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
       partSelector = partSelector.substring(1, partSelector.length);
     }
 
-    let element: Element | null = null;
+    let element: Element | null;
     if (partSelector.startsWith('//') || partSelector.startsWith('id(')) {
       // Part selector is a XPATH
       element = this.readerService.getElementFromXPath(partSelector);
@@ -2262,6 +2377,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   }
 
   applyWritingStyle() {
+    this.bookAnimation?.()?.cancel();
     setTimeout(() => this.updateImageSizes());
     if (this.layoutMode() !== BookPageLayoutMode.Default) {
       const lastSelector = this.readerService.scopeBookReaderXpath(this.lastSeenScrollPartPath);
@@ -2280,6 +2396,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   }
 
   applyLayoutMode(mode: BookPageLayoutMode, isChange: boolean = false) {
+    this.bookAnimation?.()?.cancel();
+    const pagingRevision = this.pagingRevision;
     this.clearTimeout(this.updateImageSizeTimeout);
     this.updateImageSizeTimeout = setTimeout( () => {
       this.updateImageSizes();
@@ -2307,8 +2425,14 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     });
 
     const lastSelector = this.lastSeenScrollPartPath;
+    // Fork (L3): the pending typography anchor, or the text at the top of the old layout, wins over the saved element
+    const lastText = isChange ? (this.pendingAnchorRestore?.text ?? this.getFirstVisibleTextRange()) : null;
     if (isChange && lastSelector !== '') {
-      setTimeout(() => this.scrollTo(lastSelector), SCROLL_DELAY);
+      setTimeout(() => {
+        if (pagingRevision !== this.pagingRevision) return;
+        if (lastText && this.alignToSpread(lastText)) return;
+        this.scrollTo(lastSelector);
+      }, SCROLL_DELAY);
     }
   }
 
@@ -2389,7 +2513,6 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   clearTimeout(timeoutId: number | undefined) {
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId);
-      timeoutId = undefined;
     }
   }
 

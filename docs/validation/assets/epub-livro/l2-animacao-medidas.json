@@ -1,0 +1,26 @@
+[
+  {
+    "columns": 1,
+    "direction": 0,
+    "responseMs": 623,
+    "saves": 1
+  },
+  {
+    "columns": 1,
+    "direction": 1,
+    "responseMs": 610,
+    "saves": 1
+  },
+  {
+    "columns": 2,
+    "direction": 0,
+    "responseMs": 652,
+    "saves": 1
+  },
+  {
+    "columns": 2,
+    "direction": 1,
+    "responseMs": 628,
+    "saves": 1
+  }
+]

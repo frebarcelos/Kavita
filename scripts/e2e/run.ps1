@@ -7,7 +7,11 @@ param(
     [int]$DebugPort = 9333,
     [string]$Chrome = 'C:\Program Files\Google\Chrome\Application\chrome.exe',
     # Keeps the server and the browser profile for a look after a failure
-    [switch]$Keep
+    [switch]$Keep,
+    # L2.2: also validate publisher CSS clipping with the real engine
+    [switch]$MeasureEpubClipping,
+    # Focused RED/GREEN for appearance preservation; the ordinary runner still runs all reader scenarios
+    [switch]$EpubReflowOnly
 )
 $ErrorActionPreference = 'Stop'
 # Fork (item 7.1): reader end-to-end test. A disposable Kavita on 127.0.0.1 with a synthetic library mounted read-only
@@ -16,6 +20,11 @@ $ErrorActionPreference = 'Stop'
 
 $project = 'kavita-e2e'
 $root = (New-Item -ItemType Directory -Force -Path '_temp/e2e').FullName
+$repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+$expectedRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot '_temp/e2e'))
+if ($root -ne $expectedRoot -or ((Get-Item -LiteralPath $root).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+    throw 'The disposable test directory must be inside this repository, without a junction.'
+}
 $library = Join-Path $root 'library'
 $envFile = Join-Path $root '.env'
 $override = Join-Path $root 'override.yaml'
@@ -37,7 +46,9 @@ $ErrorActionPreference = 'Stop'
 if (Test-Path $library) { Remove-Item -Recurse -Force $library }
 # A fresh browser profile: a kept one serves the previous web from its cache
 if (Test-Path (Join-Path $root 'chrome')) { Remove-Item -Recurse -Force (Join-Path $root 'chrome') }
-python -I scripts/e2e/make_fixtures.py $library | Out-Null
+$fixtureArgs = @($library)
+if ($MeasureEpubClipping) { $fixtureArgs += '--publisher-css' }
+python -I scripts/e2e/make_fixtures.py @fixtureArgs | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Fixtures failed.' }
 @(
     "KAVITA_LIBRARY_PATH=$($library -replace '\\', '/')"
@@ -63,12 +74,15 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The disposable server did not start.' }
 
     $profile = Join-Path $root 'chrome'
-    $script:browser = Start-Process $Chrome -PassThru -ArgumentList @(
+    $script:browser = Start-Process $Chrome -WindowStyle Hidden -PassThru -ArgumentList @(
         # Not headless: the PDF reader's viewer does not load in headless Chrome. Off screen instead
         '--window-position=-32000,-32000', "--remote-debugging-port=$DebugPort", '--remote-allow-origins=*', "--user-data-dir=$profile",
         '--window-size=1600,1000', '--no-first-run', '--no-default-browser-check', 'about:blank')
 
-    npm exec --yes --package=node@24.15.0 -- node scripts/e2e/reader.e2e.mjs "http://127.0.0.1:$Port" $DebugPort
+    $readerArgs = @("http://127.0.0.1:$Port", $DebugPort)
+    if ($MeasureEpubClipping) { $readerArgs += '--epub-clipping' }
+    if ($EpubReflowOnly) { $readerArgs += '--epub-reflow-only' }
+    npm exec --yes --package=node@24.15.0 -- node scripts/e2e/reader.e2e.mjs @readerArgs
     $failed = $LASTEXITCODE -ne 0
 } finally {
     if ($Keep -and $failed) {

@@ -512,6 +512,7 @@
         "annotate": "Anotar"
     },
     "book-reader": {
+        "book-mode": "Livro",
         "page-label": "Página",
         "go-to-page": "Ir para página",
         "skip-header": "Ir para o conteúdo principal",

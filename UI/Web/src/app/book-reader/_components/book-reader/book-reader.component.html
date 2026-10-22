@@ -40,9 +40,11 @@
             (mousedown)="mouseDown($event)" >
 
         <div #readingHtml class="book-content {{layoutMode() | columnLayoutClass}} {{writingStyle() | writingStyleClass}}"
-             [ngStyle]="{'max-height': columnHeight(), 'max-width': verticalBookContentWidth(), 'width': verticalBookContentWidth(), 'column-width': columnWidth(), 'padding-bottom': bookContentPaddingBottom()}"
+             [ngStyle]="{'max-height': columnHeight(), 'max-width': verticalBookContentWidth(), 'width': verticalBookContentWidth(), 'column-width': columnWidth(), 'padding-bottom': bookContentPaddingBottom(), 'column-gap': bookModeActive() ? bookColumnGap() + 'px' : null}"
              [ngClass]="{'immersive': immersiveMode() && actionBarVisible, 'debug': debugMode()}"
              [innerHtml]="page()" (click)="toggleMenu($event)" (mousedown)="mouseDown($event)" (wheel)="onWheel($event)"></div>
+
+        @if (bookModeActive()) { <app-epub-book-animation /> }
 
           @if (shouldShowBottomActionBar()) {
             <div class="bottom-bar" (click)="$event.stopPropagation();">
@@ -50,6 +52,10 @@
             </div>
           }
       </div>
+      @if (bookModeActive()) {
+        <app-epub-book-decoration [twoPages]="bookTwoPages()" [page]="getVirtualPage()[0]"
+                                  [pages]="getVirtualPage()[1]" [rightToLeft]="!isLeftToRight" [dark]="darkMode()" />
+      }
     </div>
 
     <ng-template #topActionBar>
@@ -85,6 +91,12 @@
             </div>
 
             <div class="d-flex align-items-center right-group">
+              @if (bookModeAvailable()) {
+                <button type="button" class="btn btn-secondary me-1 epub-book-toggle"
+                        [attr.aria-pressed]="bookModeActive()" (click)="readerSettingsService.toggleBookMode()">
+                  <i class="fa fa-book-open" aria-hidden="true"></i> {{t('book-mode')}}
+                </button>
+              }
               @if (!this.adhocPageHistory.isEmpty()) {
                 <button class="btn btn-secondary btn-icon me-1" (click)="goBack()" [title]="t('go-back')">
                   <i class="fa fa-reply" aria-hidden="true"></i>

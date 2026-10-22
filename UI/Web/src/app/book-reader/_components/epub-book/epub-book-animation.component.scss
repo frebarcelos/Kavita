@@ -1,0 +1,11 @@
+app-epub-book-animation {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.epub-book-animation-stage {
+  overflow: hidden;
+  pointer-events: none;
+}

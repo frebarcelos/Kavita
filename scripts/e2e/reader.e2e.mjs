@@ -7,7 +7,9 @@ if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(server ?? '')) throw new Error('The end-
 const BOOK_MODE_KEY = 'kavita--reader-book-mode';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const failures = [];
+let checks = 0;
 function check(condition, label) {
+  checks++;
   console.log(`${condition ? 'PASS' : 'FAIL'} ${label}`);
   if (!condition) failures.push(label);
 }
@@ -23,10 +25,11 @@ async function until(probe, timeoutMs, stepMs = 500) {
 
 // --- Server: account, library and the chapters under test ---
 let token = '';
+let browserHeaders = {};
 async function api(route, {method = 'GET', body} = {}) {
   const response = await fetch(server + route, {
     method,
-    headers: {...(token ? {Authorization: 'Bearer ' + token} : {}), ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
+    headers: {...browserHeaders, ...(token ? {Authorization: 'Bearer ' + token} : {}), ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) throw new Error(`HTTP ${response.status} on ${method} ${route.split('?')[0]}`);
@@ -42,13 +45,13 @@ const library = await api('/api/Library/create', {method: 'POST', body: {
   id: 0, name: 'E2E', type: 1, folders: ['/media'], folderWatching: false, includeInDashboard: true, includeInSearch: true,
   manageCollections: false, manageReadingLists: false, allowScrobbling: false, allowMetadataMatching: false,
   enableMetadata: false, folderBasedOrganization: true, removePrefixForSortName: false, inheritWebLinksFromFirstChapter: false,
-  defaultLanguage: '', metadataProvider: 4, fileGroupTypes: [1, 3, 4], excludePatterns: [],
+  defaultLanguage: '', metadataProvider: 4, fileGroupTypes: [1, 2, 3, 4], excludePatterns: [],
 }});
 const libraryId = library?.id ?? (await api('/api/Library/libraries')).find(l => l.name === 'E2E').id;
 await api(`/api/Library/scan?libraryId=${libraryId}&force=true`, {method: 'POST'});
 const folders = await until(async () => {
   const rows = await api(`/api/Library/folder-series?libraryId=${libraryId}`);
-  return rows.length >= 2 ? rows : null;
+  return rows.length >= 3 ? rows : null;
 }, 120000, 2000);
 if (!folders) throw new Error('The scan did not index the fixtures.');
 async function chapterOf(folder) {
@@ -76,6 +79,13 @@ socket.onmessage = ({data}) => {
     pending.get(message.id)(message);
     pending.delete(message.id);
   } else if (message.method === 'Network.requestWillBeSent') {
+    // Reading profiles are per device. Configure the same device the UI identifies,
+    // retaining only these public headers, never Authorization or auth keys.
+    const headers = message.params.request.headers;
+    if (Object.keys(headers).some(key => key.toLowerCase() === 'x-device-id')) {
+      browserHeaders = Object.fromEntries(Object.entries(headers).filter(([key]) =>
+        ['x-device-id', 'x-kavita-client', 'user-agent'].includes(key.toLowerCase())));
+    }
     requests.push({url: message.params.request.url, method: message.params.request.method, id: message.params.requestId});
   } else if (message.method === 'Network.responseReceived') {
     const request = requests.find(r => r.id === message.params.requestId);
@@ -113,10 +123,14 @@ const progressPosts = () => requests.filter(r => r.method === 'POST' && r.url.in
 await send('Page.enable');
 await send('Runtime.enable');
 await send('Network.enable');
+// A fixed viewport also keeps screenshot compositing active with the test window hidden.
+await send('Emulation.setDeviceMetricsOverride', {width: 1600, height: 950, deviceScaleFactor: 1, mobile: false});
+await send('Emulation.setFocusEmulationEnabled', {enabled: true});
 await open('/login');
 const {authKeys, ...persisted} = user;
 await evaluate(`localStorage.setItem('kavita-user', ${JSON.stringify(JSON.stringify(persisted))}); true`);
 
+if (!process.argv.includes('--epub-reflow-only')) {
 // V1: book mode off, a PDF opens in the PDF reader, on the page the image reader and the tablet saved
 await setProgress(pdf, 2);
 await evaluate(`localStorage.setItem('${BOOK_MODE_KEY}', 'false'); true`);
@@ -164,9 +178,28 @@ await sleep(2000);
 check(await progress(pdf.chapterId) === afterTurn, 'the book button keeps the page');
 check(await evaluate(`localStorage.getItem('${BOOK_MODE_KEY}')`) === 'true', 'the book button turns the book mode on');
 
+const {runEpubTests} = await import('./epub.e2e.mjs');
+await runEpubTests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
+  evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
+
+const {runEpubAnimationTests} = await import('./epub-animation.e2e.mjs');
+await runEpubAnimationTests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
+  evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
+
+if (process.argv.includes('--epub-clipping')) {
+  const {runEpubClippingTests} = await import('./epub-clipping.e2e.mjs');
+  await runEpubClippingTests({api, libraryId, route, check, until, evaluate, open, send, sleep,
+    bookModeKey: BOOK_MODE_KEY});
+}
+}
+
+const {runEpubReflowTests} = await import('./epub-reflow.e2e.mjs');
+await runEpubReflowTests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
+  evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
+
 socket.close();
 if (failures.length) {
   console.log(`${failures.length} failed: ${failures.join('; ')}`);
   process.exit(1);
 }
-console.log('All reader end-to-end tests passed.');
+console.log(`All reader end-to-end tests passed (${checks} checks).`);

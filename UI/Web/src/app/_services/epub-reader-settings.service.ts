@@ -20,6 +20,7 @@ import {EpubFont, FontProvider} from "../_models/preferences/epub-font";
 import {FontService} from "./font.service";
 import {BreakpointService} from "./breakpoint.service";
 import {FieldTree, form, max, min} from "@angular/forms/signals";
+import {readBookMode, saveBookMode} from '../manga-reader/_components/book-renderer/book-mode';
 
 export interface ReaderSettingUpdate {
   setting: 'pageStyle' | 'clickToPaginate' | 'fullscreen' | 'writingStyle' | 'layoutMode' | 'readingDirection' | 'immersiveMode' | 'theme' | 'pageCalcMethod' | 'bookReaderDisableBookmarkIcon';
@@ -111,9 +112,16 @@ export class EpubReaderSettingsService {
   public readonly isFullscreen = this._isFullscreen.asReadonly();
   public readonly epubFonts = this._epubFonts.asReadonly();
 
+  // Browser-only presentation; never copy these values into a ReadingProfile.
+  readonly bookModeEnabled = signal(readBookMode());
+  private readonly bookLayout = signal(BookPageLayoutMode.Column2);
+  readonly bookModeAvailable = computed(() => this.writingStyle() === WritingStyle.Horizontal
+    && this.formGroup.bookReaderLayoutMode().value() !== BookPageLayoutMode.Default);
+  readonly bookModeActive = computed(() => this.bookModeEnabled() && this.bookModeAvailable());
+
   // Computed signals for derived state
   public readonly layoutMode = computed(() => {
-    const layout = this.formGroup.bookReaderLayoutMode().value();
+    const layout = this.bookModeActive() ? this.bookLayout() : this.formGroup.bookReaderLayoutMode().value();
     const mobileDevice = this.breakpointService.isMobile();
 
     if (layout !== BookPageLayoutMode.Column2 || !mobileDevice) return layout;
@@ -267,7 +275,7 @@ export class EpubReaderSettingsService {
     // Default back to Col 1 in this case
     if (newStyle === WritingStyle.Vertical ) {
       if (this.layoutMode() === BookPageLayoutMode.Column2) {
-        this.updateLayoutMode(BookPageLayoutMode.Column1);
+        this.formGroup.bookReaderLayoutMode().value.set(BookPageLayoutMode.Column1);
       }
     }
 
@@ -288,7 +296,18 @@ export class EpubReaderSettingsService {
   }
 
   updateLayoutMode(mode: BookPageLayoutMode): void {
+    if (this.bookModeActive() && mode !== BookPageLayoutMode.Default) {
+      this.bookLayout.set(mode);
+      return;
+    }
     this.formGroup.bookReaderLayoutMode().value.set(mode);
+  }
+
+  toggleBookMode(): void {
+    if (!this.bookModeAvailable()) return;
+    this.bookLayout.set(BookPageLayoutMode.Column2);
+    this.bookModeEnabled.update(enabled => !enabled);
+    saveBookMode(this.bookModeEnabled());
   }
 
   updateClickToPaginate(value: boolean): void {
@@ -436,7 +455,7 @@ export class EpubReaderSettingsService {
 
     // Update from signals
     data.bookReaderTapToPaginate = this.clickToPaginate();
-    data.bookReaderLayoutMode = this.layoutMode();
+    data.bookReaderLayoutMode = this.bookModeActive() ? modelSettings.bookReaderLayoutMode : this.layoutMode();
     data.bookReaderImmersiveMode = this.immersiveMode();
     data.bookReaderReadingDirection = this.readingDirection();
     data.bookReaderWritingStyle = this.writingStyle();

@@ -1,0 +1,184 @@
+[
+  {
+    "label": "synthetic",
+    "htmlIndex": 0,
+    "largestHtmlChars": 0,
+    "elements": 92,
+    "columns": 2,
+    "samples": [
+      10.7,
+      9,
+      8.1,
+      6.8,
+      7.2
+    ],
+    "maxMs": 10.7,
+    "geometryMismatches": 0,
+    "differences": [],
+    "sourceOffsetPreserved": true
+  },
+  {
+    "label": "largest-epub",
+    "htmlIndex": 23,
+    "largestHtmlChars": 183302,
+    "elements": 3049,
+    "columns": 2,
+    "samples": [
+      19.1,
+      17.7,
+      15.8,
+      16.8,
+      22.5
+    ],
+    "maxMs": 22.5,
+    "geometryMismatches": 26,
+    "differences": [
+      {
+        "half": 0,
+        "element": 9,
+        "tag": "P",
+        "expected": [
+          [
+            88,
+            419.54168701171875,
+            680,
+            24.33333396911621
+          ]
+        ],
+        "actual": [
+          [
+            88,
+            419.54168701171875,
+            680,
+            26
+          ]
+        ]
+      },
+      {
+        "half": 0,
+        "element": 10,
+        "tag": "P",
+        "expected": [
+          [
+            88,
+            450.2708435058594,
+            680,
+            24
+          ]
+        ],
+        "actual": [
+          [
+            88,
+            451.9375,
+            680,
+            24
+          ]
+        ]
+      },
+      {
+        "half": 0,
+        "element": 11,
+        "tag": "P",
+        "expected": [
+          [
+            64,
+            480.66668701171875,
+            704,
+            24
+          ]
+        ],
+        "actual": [
+          [
+            64,
+            482.3333435058594,
+            704,
+            24
+          ]
+        ]
+      },
+      {
+        "half": 0,
+        "element": 12,
+        "tag": "P",
+        "expected": [
+          [
+            64,
+            509.4583435058594,
+            704,
+            24
+          ]
+        ],
+        "actual": [
+          [
+            64,
+            511.125,
+            704,
+            24
+          ]
+        ]
+      },
+      {
+        "half": 0,
+        "element": 13,
+        "tag": "P",
+        "expected": [
+          [
+            88,
+            539.8541870117188,
+            680,
+            24
+          ]
+        ],
+        "actual": [
+          [
+            88,
+            541.5208740234375,
+            680,
+            24
+          ]
+        ]
+      }
+    ],
+    "sourceOffsetPreserved": true
+  },
+  {
+    "label": "publisher-css",
+    "htmlIndex": 0,
+    "largestHtmlChars": 0,
+    "elements": 97,
+    "columns": 2,
+    "samples": [
+      7.5,
+      9.1,
+      7.8,
+      6.5,
+      9.3
+    ],
+    "maxMs": 9.3,
+    "geometryMismatches": 1,
+    "differences": [
+      {
+        "half": 1,
+        "element": 0,
+        "tag": "ASIDE",
+        "expected": [
+          [
+            1420,
+            80,
+            150,
+            18
+          ]
+        ],
+        "actual": [
+          [
+            1420,
+            118,
+            150,
+            24
+          ]
+        ]
+      }
+    ],
+    "sourceOffsetPreserved": true
+  }
+]
