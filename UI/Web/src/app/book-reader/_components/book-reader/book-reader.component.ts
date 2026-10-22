@@ -76,6 +76,7 @@ import {BookTheme} from "../../../_models/preferences/book-theme";
 import {Stack} from "../../../shared/data-structures/stack";
 import {EpubBookDecorationComponent} from '../epub-book-decoration/epub-book-decoration.component';
 import {EpubBookAnimationComponent} from '../epub-book/epub-book-animation.component';
+import {epubBookColumnGap} from '../epub-book/epub-book-layout';
 
 
 interface HistoryPoint {
@@ -409,7 +410,12 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   protected readonly bookModeActive = this.readerSettingsService.bookModeActive;
   protected readonly bookModeAvailable = this.readerSettingsService.bookModeAvailable;
   protected readonly bookTwoPages = computed(() => this.layoutMode() === BookPageLayoutMode.Column2);
-  protected readonly bookColumnGap = computed(() => this.bookModeActive() && this.bookTwoPages() ? 64 : COLUMN_GAP);
+  protected readonly bookColumnGap = computed(() => {
+    this.windowWidth(); // the margin is in vw, converted with the current width
+    return this.bookModeActive() && this.bookTwoPages()
+      ? epubBookColumnGap(this.convertVwToPx(parseInt(this.pageStyles()['margin-left'], 10)))
+      : COLUMN_GAP;
+  });
 
   protected columnWidth!: Signal<string>;
   protected columnHeight!: Signal<string>;

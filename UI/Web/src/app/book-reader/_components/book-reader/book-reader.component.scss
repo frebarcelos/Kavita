@@ -455,3 +455,9 @@ $pagination-opacity: 0;
 ::ng-deep .book-content .tooltip-inner {
   border: none !important;
 }
+
+// Fork (EPUB book): drop caps and ornaments are often JPEGs with a white background. On light paper they blend like
+// print, white taking the paper colour; dark themes are left alone, as multiply would turn the images almost black.
+::ng-deep .reader-container.epub-book-mode:not(.dark-mode) .book-content img {
+  mix-blend-mode: multiply;
+}

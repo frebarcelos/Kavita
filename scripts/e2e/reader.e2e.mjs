@@ -56,8 +56,10 @@ const libraryId = library?.id ?? (await api('/api/Library/libraries')).find(l =>
 await api(`/api/Library/scan?libraryId=${libraryId}&force=true`, {method: 'POST'});
 const folders = await until(async () => {
   const rows = await api(`/api/Library/folder-series?libraryId=${libraryId}`);
-  // Wait for the folders the scenarios use, not for a count: the publisher CSS fixture adds folders
-  return ['Livro PDF', 'Livro EPUB'].every(folder => rows.some(row => row.path === folder)) ? rows : null;
+  // Wait for every fixture folder, not for a count: the publisher CSS fixture adds one, and the PDF pages are only
+  // ready once the scan has finished
+  const expected = ['Livro PDF', 'Revista', 'Livro EPUB', ...(process.argv.includes('--epub-clipping') ? ['Livro EPUB CSS'] : [])];
+  return expected.every(folder => rows.some(row => row.path === folder)) ? rows : null;
 }, 120000, 2000);
 if (!folders) throw new Error('The scan did not index the fixtures.');
 async function chapterOf(folder) {

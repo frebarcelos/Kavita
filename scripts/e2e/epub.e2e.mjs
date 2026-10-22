@@ -81,6 +81,10 @@ export async function runEpubTests({api, chapter, libraryId, route, check, until
   check(await evaluate(`getComputedStyle(document.querySelector('app-epub-book-decoration')).pointerEvents`) === 'none',
     'EPUB Livro: decoration does not intercept text selection or links');
   await screenshot('papel-duas-paginas');
+  // Many EPUBs draw drop caps and ornaments as JPEGs with a white background; on paper they blend like print
+  const imageBlend = () => evaluate(`(() => { const c = document.querySelector('.book-content'), i = document.createElement('img');
+    c.prepend(i); const value = getComputedStyle(i).mixBlendMode; i.remove(); return value; })()`);
+  check(await imageBlend() === 'multiply', 'EPUB Livro: images blend with the paper theme');
 
   const initial = await state(), posts = progressPosts(), start = performance.now();
   await key('ArrowRight', 'ArrowRight');
@@ -116,6 +120,9 @@ export async function runEpubTests({api, chapter, libraryId, route, check, until
     check(!!await until(async () => (await state())?.[property] !== typography[property], 3000, 50),
       `EPUB Livro: changing ${id} repaginates live text`);
   }
+  const margined = await state();
+  check(Math.abs(margined.gap - (64 + 2 * parseFloat(margined.margin))) < 1.5,
+    `EPUB Livro: the spine side keeps the reader margin plus the spine room (${margined.gap}px, margin ${margined.margin})`);
   const changedFont = await evaluate(`(() => { const input = document.querySelector('select#library-type');
     const next = [...input.options].find(o => o.value && o.value !== input.value);
     if (!next) return false; input.value = next.value;
@@ -135,6 +142,8 @@ export async function runEpubTests({api, chapter, libraryId, route, check, until
     await configure({bookReaderThemeName: theme});
     const themed = await load(true);
     check(themed.dark === (theme !== 'White') && themed.spine, `EPUB Livro: ${theme} palette`);
+    // Multiply would turn images almost black on a dark page; on white it changes nothing
+    if (theme !== 'White') check(await imageBlend() === 'normal', `EPUB Livro: ${theme} keeps images unblended`);
     await screenshot(theme.toLowerCase());
   }
   await configure({bookReaderReadingDirection: 1});

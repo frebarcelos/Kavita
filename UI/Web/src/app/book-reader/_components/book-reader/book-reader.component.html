@@ -1,6 +1,6 @@
 @let isLeftToRight = readingDirection() === ReadingDirection.LeftToRight;
 
-<div class="container-flex {{darkMode() ? 'dark-mode' : ''}} reader-container {{layoutMode() | columnLayoutClass}} {{writingStyle() | writingStyleClass}}"
+<div class="container-flex {{darkMode() ? 'dark-mode' : ''}} {{bookModeActive() ? 'epub-book-mode' : ''}} reader-container {{layoutMode() | columnLayoutClass}} {{writingStyle() | writingStyleClass}}"
      tabindex="0" #reader>
   <ng-container *transloco="let t; prefix: 'book-reader'">
     <div class="fixed-top" #stickyTop>
