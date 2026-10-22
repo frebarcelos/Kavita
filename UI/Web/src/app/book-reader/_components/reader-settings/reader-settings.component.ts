@@ -108,6 +108,9 @@ export class ReaderSettingsComponent implements OnInit {
   readerSettingsService = input.required<EpubReaderSettingsService>();
 
   settingsForm!: FieldTree<BookReadingProfileFormModel>;
+  /** Fork (L6): choices in tenths of an em; an empty value keeps the book's own */
+  protected readonly paragraphSpacingChoices = [0, 5, 10, 15, 20, 30];
+  protected readonly textIndentChoices = [0, 5, 10, 15, 20, 30];
   /**
    * System provided themes
    */
@@ -187,4 +190,13 @@ export class ReaderSettingsComponent implements OnInit {
   protected readonly ReadingDirection = ReadingDirection;
   protected readonly BookPageLayoutMode = BookPageLayoutMode;
   protected readonly FontProvider = FontProvider;
+
+  /** Fork (L6): the select value of an option in tenths of an em, empty for the book's own */
+  protected tenths(value: number | null) {
+    return value === null || value === undefined ? '' : String(value);
+  }
+
+  protected setTenths(field: 'bookReaderParagraphSpacing' | 'bookReaderTextIndent', value: string) {
+    this.settingsForm[field]().value.set(value === '' ? null : parseInt(value, 10));
+  }
 }

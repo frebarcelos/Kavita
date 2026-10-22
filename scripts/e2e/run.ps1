@@ -15,7 +15,9 @@ param(
     # Focused RED/GREEN for selection, highlights and navigation with the book on (L4)
     [switch]$EpubL4Only,
     # Focused RED/GREEN for the corner fold and drag of the book (L5)
-    [switch]$EpubL5Only
+    [switch]$EpubL5Only,
+    # Focused RED/GREEN for the text options of the reading profile (L6)
+    [switch]$EpubL6Only
 )
 $ErrorActionPreference = 'Stop'
 # Fork (item 7.1): reader end-to-end test. A disposable Kavita on 127.0.0.1 with a synthetic library mounted read-only
@@ -50,8 +52,8 @@ $ErrorActionPreference = 'Stop'
 if (Test-Path $library) { Remove-Item -Recurse -Force $library }
 # A fresh browser profile: a kept one serves the previous web from its cache
 if (Test-Path (Join-Path $root 'chrome')) { Remove-Item -Recurse -Force (Join-Path $root 'chrome') }
-$fixtureArgs = @($library)
-if ($MeasureEpubClipping) { $fixtureArgs += '--publisher-css' }
+# The EPUB with publisher CSS serves the clipping measure (L2) and the publisher styles option (L6)
+$fixtureArgs = @($library, '--publisher-css')
 python -I scripts/e2e/make_fixtures.py @fixtureArgs | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Fixtures failed.' }
 @(
@@ -88,6 +90,7 @@ try {
     if ($EpubReflowOnly) { $readerArgs += '--epub-reflow-only' }
     if ($EpubL4Only) { $readerArgs += '--epub-l4-only' }
     if ($EpubL5Only) { $readerArgs += '--epub-l5-only' }
+    if ($EpubL6Only) { $readerArgs += '--epub-l6-only' }
     npm exec --yes --package=node@24.15.0 -- node scripts/e2e/reader.e2e.mjs @readerArgs
     $failed = $LASTEXITCODE -ne 0
 } finally {

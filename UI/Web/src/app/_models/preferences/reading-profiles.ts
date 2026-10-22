@@ -52,6 +52,12 @@ export interface ReadingProfile {
   bookReaderLayoutMode: BookPageLayoutMode;
   bookReaderImmersiveMode: boolean;
   bookReaderDisableBookmarkIcon: boolean;
+  /** Fork (L6): text options; spacing and indent in tenths of an em, null keeps the book's own */
+  bookReaderJustify: boolean;
+  bookReaderHyphenate: boolean;
+  bookReaderParagraphSpacing: number | null;
+  bookReaderTextIndent: number | null;
+  bookReaderIgnorePublisherStyles: boolean;
 
   // PDF Reader
   pdfTheme: PdfTheme;

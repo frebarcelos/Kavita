@@ -74,6 +74,7 @@ describe('EPUB pagination before book presentation', () => {
       layoutMode: () => BookPageLayoutMode.Column2, writingStyle: () => WritingStyle.Horizontal,
       addEmptyPageIfRequired: vi.fn(), getVirtualPage: () => [1, 4, 1000],
       hasDelayedScroll: false, pagingRevision: 0, scrollService: {scrollIntoView: vi.fn()},
+      readerSettingsService: {textOptions: () => ({justify: false, hyphenate: false, paragraphSpacing: null, textIndent: null, ignorePublisherStyles: false})},
     });
     try {
       reader.applyPageStyles({'font-family': 'inherit', 'font-size': '150%',
@@ -103,6 +104,7 @@ describe('EPUB pagination before book presentation', () => {
       convertVwToPx: () => 0, updateImageSizes: vi.fn(), updateWidthAndHeightCalcs: vi.fn(),
       layoutMode: () => BookPageLayoutMode.Column2, addEmptyPageIfRequired: vi.fn(),
       hasDelayedScroll: false, pagingRevision: 0, alignToSpread: vi.fn(() => true), scrollTo: vi.fn(),
+      document, readerSettingsService: {textOptions: () => ({justify: false, hyphenate: false, paragraphSpacing: null, textIndent: null, ignorePublisherStyles: false})},
     });
     try {
       reader.applyPageStyles({'font-family': 'inherit', 'font-size': '170%',
@@ -160,6 +162,7 @@ describe('EPUB pagination before book presentation', () => {
       layoutMode: () => BookPageLayoutMode.Column2, writingStyle: () => WritingStyle.Horizontal,
       addEmptyPageIfRequired: vi.fn(), getVirtualPage: () => [1, 4, 1000],
       hasDelayedScroll: false, scrollTo: vi.fn(), pagingRevision: 0,
+      document, readerSettingsService: {textOptions: () => ({justify: false, hyphenate: false, paragraphSpacing: null, textIndent: null, ignorePublisherStyles: false})},
       nextPage: vi.fn(() => offsetAtCommand = content.scrollLeft),
       getFirstVisibleTextRange: () => null, // covers the element fallback; the text anchor has its own test
       bookModeActive: () => false,
@@ -292,6 +295,31 @@ describe('EPUB pagination before book presentation', () => {
         expect(openCorner).not.toHaveBeenCalled();
       } finally { selection.mockRestore(); }
     });
+  });
+
+  it('applies the text options with the page styles, after the reading place is taken (L6)', () => {
+    const content = document.createElement('div');
+    content.innerHTML = '<style>p { text-indent: 2em }</style><p id="first">Texto</p>';
+    const order: string[] = [];
+    const reader = Object.create(BookReaderComponent.prototype);
+    Object.assign(reader, {
+      document, bookContentElemRef: () => new ElementRef(content),
+      renderer: {setStyle: vi.fn(), removeStyle: vi.fn()},
+      getFirstVisibleElementXPath: () => { order.push('anchor'); return null; }, getFirstVisibleTextRange: () => null,
+      convertVwToPx: () => 0, updateImageSizes: vi.fn(), updateWidthAndHeightCalcs: vi.fn(),
+      layoutMode: () => BookPageLayoutMode.Default, pagingRevision: 0,
+      readerSettingsService: {textOptions: () => { order.push('options'); return {justify: true, hyphenate: false,
+        paragraphSpacing: null, textIndent: null, ignorePublisherStyles: true}; }},
+    });
+    try {
+      reader.applyPageStyles({'font-family': 'inherit', 'font-size': '100%',
+        'line-height': '100%', 'margin-left': '0vw', 'margin-right': '0vw'});
+      expect(order).toEqual(['anchor', 'options']);
+      expect(document.getElementById('epub-text-options')?.textContent).toContain('justify');
+      expect(content.querySelector('style')!.getAttribute('media')).toBe('not all');
+    } finally {
+      document.getElementById('epub-text-options')?.remove();
+    }
   });
 
   it('leaves the HTML boundary to the original next/previous file navigation', () => {

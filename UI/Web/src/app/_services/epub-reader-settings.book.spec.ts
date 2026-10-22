@@ -106,4 +106,47 @@ describe('EPUB browser book preference', () => {
     }));
     expect(settings.layoutMode()).toBe(BookPageLayoutMode.Column2);
   });
+
+  describe('text options (L6)', () => {
+    const base = {id: 1, kind: ReadingProfileKind.Implicit,
+      bookReaderLayoutMode: BookPageLayoutMode.Column1, bookReaderFontFamily: 'default',
+      bookReaderFontSize: 100, bookReaderLineSpacing: 100, bookReaderMargin: 4,
+      bookReaderTapToPaginate: false, bookReaderImmersiveMode: false, bookReaderDisableBookmarkIcon: false,
+      bookReaderReadingDirection: 0, bookReaderWritingStyle: WritingStyle.Horizontal, bookReaderThemeName: 'Dark',
+    };
+    async function open(profile: ReadingProfile) {
+      const profiles = TestBed.inject(ReadingProfileService);
+      profiles.getForSeries = vi.fn(() => of(profile));
+      profiles.updateParentProfile = vi.fn(() => of(profile));
+      const settings = TestBed.inject(EpubReaderSettingsService);
+      await settings.initialize(1, 2, profile);
+      return {settings, profiles};
+    }
+
+    it('reads a profile from before the options as the book own layout', async () => {
+      const {settings} = await open({...base} as ReadingProfile);
+      expect(settings.textOptions()).toEqual({justify: false, hyphenate: false, paragraphSpacing: null,
+        textIndent: null, ignorePublisherStyles: false});
+    });
+
+    it('reads the options saved in the profile', async () => {
+      const {settings} = await open({...base, bookReaderJustify: true, bookReaderHyphenate: true,
+        bookReaderParagraphSpacing: 5, bookReaderTextIndent: 0, bookReaderIgnorePublisherStyles: true} as ReadingProfile);
+      expect(settings.textOptions()).toEqual({justify: true, hyphenate: true, paragraphSpacing: 5, textIndent: 0,
+        ignorePublisherStyles: true});
+    });
+
+    it('saves changed options with the profile', async () => {
+      const {settings, profiles} = await open({...base} as ReadingProfile);
+      settings.formGroup.bookReaderJustify().value.set(true);
+      settings.formGroup.bookReaderTextIndent().value.set(15);
+      settings.formGroup.bookReaderIgnorePublisherStyles().value.set(true);
+      expect(settings.textOptions()).toEqual(expect.objectContaining({justify: true, textIndent: 15, ignorePublisherStyles: true}));
+      settings.updateParentProfile();
+      expect(profiles.updateParentProfile).toHaveBeenCalledWith(1, 2, expect.objectContaining({
+        bookReaderJustify: true, bookReaderHyphenate: false, bookReaderParagraphSpacing: null,
+        bookReaderTextIndent: 15, bookReaderIgnorePublisherStyles: true,
+      }));
+    });
+  });
 });

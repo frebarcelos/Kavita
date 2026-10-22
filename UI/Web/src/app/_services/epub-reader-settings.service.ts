@@ -3,6 +3,7 @@ import {firstValueFrom, Observable, skip, Subject} from 'rxjs';
 import {bookColorThemes, PageStyle} from "../book-reader/_components/reader-settings/reader-settings.component";
 import {ReadingDirection} from '../_models/preferences/reading-direction';
 import {WritingStyle} from '../_models/preferences/writing-style';
+import {EpubTextOptions} from '../book-reader/_components/book-reader/epub-text-options';
 import {BookPageLayoutMode} from "../_models/readers/book-page-layout-mode";
 import {FormControl, FormGroup, NonNullableFormBuilder} from "@angular/forms";
 import {ReadingProfile, ReadingProfileKind} from "../_models/preferences/reading-profiles";
@@ -39,6 +40,11 @@ export interface BookReadingProfileFormModel {
   bookReaderLayoutMode: BookPageLayoutMode;
   bookReaderImmersiveMode: boolean;
   bookReaderDisableBookmarkIcon: boolean;
+  bookReaderJustify: boolean;
+  bookReaderHyphenate: boolean;
+  bookReaderParagraphSpacing: number | null;
+  bookReaderTextIndent: number | null;
+  bookReaderIgnorePublisherStyles: boolean;
 }
 
 @Injectable()
@@ -74,7 +80,12 @@ export class EpubReaderSettingsService {
     bookReaderReadingDirection: ReadingDirection.LeftToRight,
     bookReaderTapToPaginate: false,
     bookReaderThemeName: "",
-    bookReaderWritingStyle: WritingStyle.Horizontal
+    bookReaderWritingStyle: WritingStyle.Horizontal,
+    bookReaderJustify: false,
+    bookReaderHyphenate: false,
+    bookReaderParagraphSpacing: null,
+    bookReaderTextIndent: null,
+    bookReaderIgnorePublisherStyles: false,
   })
   formGroup = form(this.formModel, path => {
     min(path.bookReaderFontSize, 50);
@@ -104,6 +115,14 @@ export class EpubReaderSettingsService {
       'margin-right': `${margin}vw`,
     };
   });
+  /** Fork (L6): the text options of the profile, applied by the reader over the book's own styles */
+  public readonly textOptions = computed<EpubTextOptions>(() => ({
+    justify: this.formGroup.bookReaderJustify().value(),
+    hyphenate: this.formGroup.bookReaderHyphenate().value(),
+    paragraphSpacing: this.formGroup.bookReaderParagraphSpacing().value(),
+    textIndent: this.formGroup.bookReaderTextIndent().value(),
+    ignorePublisherStyles: this.formGroup.bookReaderIgnorePublisherStyles().value(),
+  }));
   public readonly readingDirection = computed(() => this.formGroup.bookReaderReadingDirection().value());
   public readonly writingStyle = computed(() => this.formGroup.bookReaderWritingStyle().value());
   public readonly activeTheme = this._activeTheme.asReadonly();
@@ -210,6 +229,12 @@ export class EpubReaderSettingsService {
     if (profile.bookReaderFontFamily === undefined || profile.bookReaderFontFamily === 'default') {
       profile.bookReaderFontFamily = FontService.DefaultEpubFont;
     }
+    // Fork (L6): a profile saved before the text options keeps the book's own layout
+    profile.bookReaderJustify ??= false;
+    profile.bookReaderHyphenate ??= false;
+    profile.bookReaderParagraphSpacing ??= null;
+    profile.bookReaderTextIndent ??= null;
+    profile.bookReaderIgnorePublisherStyles ??= false;
     if (profile.bookReaderFontSize === undefined || profile.bookReaderFontSize < 50) {
       profile.bookReaderFontSize = 100;
     }
@@ -396,6 +421,11 @@ export class EpubReaderSettingsService {
       bookReaderTapToPaginate: profile.bookReaderTapToPaginate,
       bookReaderThemeName: profile.bookReaderThemeName,
       bookReaderWritingStyle: profile.bookReaderWritingStyle,
+      bookReaderJustify: profile.bookReaderJustify,
+      bookReaderHyphenate: profile.bookReaderHyphenate,
+      bookReaderParagraphSpacing: profile.bookReaderParagraphSpacing,
+      bookReaderTextIndent: profile.bookReaderTextIndent,
+      bookReaderIgnorePublisherStyles: profile.bookReaderIgnorePublisherStyles,
     });
   }
 
@@ -452,6 +482,11 @@ export class EpubReaderSettingsService {
     data.bookReaderLineSpacing = modelSettings.bookReaderLineSpacing;
     data.bookReaderMargin = modelSettings.bookReaderMargin;
     data.bookReaderDisableBookmarkIcon = modelSettings.bookReaderDisableBookmarkIcon;
+    data.bookReaderJustify = modelSettings.bookReaderJustify;
+    data.bookReaderHyphenate = modelSettings.bookReaderHyphenate;
+    data.bookReaderParagraphSpacing = modelSettings.bookReaderParagraphSpacing;
+    data.bookReaderTextIndent = modelSettings.bookReaderTextIndent;
+    data.bookReaderIgnorePublisherStyles = modelSettings.bookReaderIgnorePublisherStyles;
 
     // Update from signals
     data.bookReaderTapToPaginate = this.clickToPaginate();

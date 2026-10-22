@@ -53,6 +53,54 @@
                         </span>
                 </div>
 
+                <!-- Fork (L6): text options of the reading profile -->
+                <div class="row g-0 controls mt-2">
+                  <label for="justify-text" class="form-label col-6">{{t('justify-label')}}</label>
+                  <div class="form-check form-switch col-6">
+                    <input type="checkbox" id="justify-text" [formField]="settingsForm.bookReaderJustify" class="form-check-input" switch>
+                  </div>
+                </div>
+
+                <div class="row g-0 controls">
+                  <label for="hyphenate-text" class="form-label col-6">{{t('hyphenate-label')}}</label>
+                  <div class="form-check form-switch col-6">
+                    <input type="checkbox" id="hyphenate-text" [formField]="settingsForm.bookReaderHyphenate" class="form-check-input" switch>
+                  </div>
+                </div>
+
+                <div class="row g-0 controls">
+                  <label for="paragraph-spacing" class="form-label col-6">{{t('paragraph-spacing-label')}}</label>
+                  <select class="form-select form-select-sm col-6 w-50" id="paragraph-spacing"
+                          [value]="tenths(settingsForm.bookReaderParagraphSpacing().value())"
+                          (change)="setTenths('bookReaderParagraphSpacing', $any($event.target).value)">
+                    <option value="">{{t('from-book')}}</option>
+                    @for (choice of paragraphSpacingChoices; track choice) {
+                      <option [value]="choice">{{choice / 10}} em</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="row g-0 controls">
+                  <label for="text-indent" class="form-label col-6">{{t('text-indent-label')}}</label>
+                  <select class="form-select form-select-sm col-6 w-50" id="text-indent"
+                          [value]="tenths(settingsForm.bookReaderTextIndent().value())"
+                          (change)="setTenths('bookReaderTextIndent', $any($event.target).value)">
+                    <option value="">{{t('from-book')}}</option>
+                    @for (choice of textIndentChoices; track choice) {
+                      <option [value]="choice">{{choice / 10}} em</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="row g-0 controls">
+                  <label for="ignore-publisher-styles" class="form-label col-6">{{t('ignore-publisher-styles-label')}}
+                    <i class="fa fa-info-circle ms-1" aria-hidden="true" placement="top" [ngbTooltip]="t('ignore-publisher-styles-tooltip')" role="button" tabindex="0"></i>
+                  </label>
+                  <div class="form-check form-switch col-6">
+                    <input type="checkbox" id="ignore-publisher-styles" [formField]="settingsForm.bookReaderIgnorePublisherStyles" class="form-check-input" switch>
+                  </div>
+                </div>
+
                 <div class="row g-0 justify-content-between mt-2">
                   <button (click)="resetSettings()" class="btn btn-primary col">{{t('reset-to-defaults')}}</button>
                 </div>

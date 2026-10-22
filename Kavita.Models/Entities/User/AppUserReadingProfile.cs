@@ -143,6 +143,26 @@ public class AppUserReadingProfile
     /// Disables the bookmark icons in the Epub Reader
     /// </summary>
     public bool BookReaderDisableBookmarkIcon { get; set; } = false;
+    /// <summary>
+    /// Book Reader Option (fork): justify paragraphs to both margins
+    /// </summary>
+    public bool BookReaderJustify { get; set; } = false;
+    /// <summary>
+    /// Book Reader Option (fork): break words at the end of a line, by the language of the book
+    /// </summary>
+    public bool BookReaderHyphenate { get; set; } = false;
+    /// <summary>
+    /// Book Reader Option (fork): space between paragraphs, in tenths of an em. Null keeps the book's own
+    /// </summary>
+    public int? BookReaderParagraphSpacing { get; set; }
+    /// <summary>
+    /// Book Reader Option (fork): first line indent, in tenths of an em. Null keeps the book's own
+    /// </summary>
+    public int? BookReaderTextIndent { get; set; }
+    /// <summary>
+    /// Book Reader Option (fork): turn off the publisher's stylesheets while reading
+    /// </summary>
+    public bool BookReaderIgnorePublisherStyles { get; set; } = false;
     #endregion
 
     #region PdfReader

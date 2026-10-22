@@ -3384,7 +3384,16 @@ namespace Kavita.Database.Migrations
                     b.Property<int>("BookReaderFontSize")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("BookReaderHyphenate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("BookReaderIgnorePublisherStyles")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("BookReaderImmersiveMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("BookReaderJustify")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("BookReaderLayoutMode")
@@ -3396,10 +3405,16 @@ namespace Kavita.Database.Migrations
                     b.Property<int>("BookReaderMargin")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("BookReaderParagraphSpacing")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("BookReaderReadingDirection")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("BookReaderTapToPaginate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BookReaderTextIndent")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("BookReaderWritingStyle")

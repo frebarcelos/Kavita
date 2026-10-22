@@ -171,6 +171,40 @@ public class ReadingProfileServiceTest(ITestOutputHelper outputHelper): Abstract
         Assert.Equal(1, implicitCount);
     }
 
+    /// <summary>
+    /// Fork (L6): the EPUB text options travel with the profile; a profile without them keeps the book's own layout
+    /// </summary>
+    [Fact]
+    public async Task UpdateImplicitReadingProfile_KeepsEpubTextOptions()
+    {
+        var (unitOfWork, context, mapper) = await CreateDatabase();
+        var (rps, user, _, series) = await Setup(unitOfWork, context, mapper);
+
+        var untouched = await rps.UpdateImplicitReadingProfile(user.Id, series.LibraryId, series.Id,
+            new UserReadingProfileDto {BookReaderFontSize = 120}, null);
+        Assert.False(untouched.BookReaderJustify);
+        Assert.False(untouched.BookReaderHyphenate);
+        Assert.Null(untouched.BookReaderParagraphSpacing);
+        Assert.Null(untouched.BookReaderTextIndent);
+        Assert.False(untouched.BookReaderIgnorePublisherStyles);
+
+        await rps.UpdateImplicitReadingProfile(user.Id, series.LibraryId, series.Id, new UserReadingProfileDto
+        {
+            BookReaderJustify = true,
+            BookReaderHyphenate = true,
+            BookReaderParagraphSpacing = 5,
+            BookReaderTextIndent = 0,
+            BookReaderIgnorePublisherStyles = true,
+        }, null);
+
+        var profile = await rps.GetReadingProfileDtoForSeries(user.Id, series.LibraryId, series.Id, null);
+        Assert.True(profile.BookReaderJustify);
+        Assert.True(profile.BookReaderHyphenate);
+        Assert.Equal(5, profile.BookReaderParagraphSpacing);
+        Assert.Equal(0, profile.BookReaderTextIndent);
+        Assert.True(profile.BookReaderIgnorePublisherStyles);
+    }
+
     [Fact]
     public async Task GetCorrectProfile()
     {

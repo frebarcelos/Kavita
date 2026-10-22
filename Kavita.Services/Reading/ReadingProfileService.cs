@@ -455,6 +455,11 @@ public class ReadingProfileService(IUnitOfWork unitOfWork, ILocalizationService 
         existingProfile.BookReaderLayoutMode = dto.BookReaderLayoutMode;
         existingProfile.BookReaderImmersiveMode = dto.BookReaderImmersiveMode;
         existingProfile.BookReaderDisableBookmarkIcon = dto.BookReaderDisableBookmarkIcon;
+        existingProfile.BookReaderJustify = dto.BookReaderJustify;
+        existingProfile.BookReaderHyphenate = dto.BookReaderHyphenate;
+        existingProfile.BookReaderParagraphSpacing = dto.BookReaderParagraphSpacing;
+        existingProfile.BookReaderTextIndent = dto.BookReaderTextIndent;
+        existingProfile.BookReaderIgnorePublisherStyles = dto.BookReaderIgnorePublisherStyles;
 
         // PDF Reading
         existingProfile.PdfTheme = dto.PdfTheme;

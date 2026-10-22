@@ -58,7 +58,7 @@ const folders = await until(async () => {
   const rows = await api(`/api/Library/folder-series?libraryId=${libraryId}`);
   // Wait for every fixture folder, not for a count: the publisher CSS fixture adds one, and the PDF pages are only
   // ready once the scan has finished
-  const expected = ['Livro PDF', 'Revista', 'Livro EPUB', ...(process.argv.includes('--epub-clipping') ? ['Livro EPUB CSS'] : [])];
+  const expected = ['Livro PDF', 'Revista', 'Livro EPUB', 'Livro EPUB CSS'];
   return expected.every(folder => rows.some(row => row.path === folder)) ? rows : null;
 }, 120000, 2000);
 if (!folders) throw new Error('The scan did not index the fixtures.');
@@ -138,7 +138,8 @@ await open('/login');
 const {authKeys, ...persisted} = user;
 await evaluate(`localStorage.setItem('kavita-user', ${JSON.stringify(JSON.stringify(persisted))}); true`);
 
-const only = process.argv.includes('--epub-reflow-only') || process.argv.includes('--epub-l4-only') || process.argv.includes('--epub-l5-only');
+const focus = ['--epub-reflow-only', '--epub-l4-only', '--epub-l5-only', '--epub-l6-only'].find(flag => process.argv.includes(flag));
+const only = !!focus;
 if (!only) {
 // V1: book mode off, a PDF opens in the PDF reader, on the page the image reader and the tablet saved
 await setProgress(pdf, 2);
@@ -202,22 +203,28 @@ if (process.argv.includes('--epub-clipping')) {
 }
 }
 
-if (!process.argv.includes('--epub-l4-only') && !process.argv.includes('--epub-l5-only')) {
+if (!focus || focus === '--epub-reflow-only') {
 const {runEpubReflowTests} = await import('./epub-reflow.e2e.mjs');
 await runEpubReflowTests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
   evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
 }
 
-if (!process.argv.includes('--epub-reflow-only') && !process.argv.includes('--epub-l5-only')) {
+if (!focus || focus === '--epub-l4-only') {
 const {runEpubL4Tests} = await import('./epub-l4.e2e.mjs');
 await runEpubL4Tests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
   evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
 }
 
-if (!process.argv.includes('--epub-reflow-only') && !process.argv.includes('--epub-l4-only')) {
+if (!focus || focus === '--epub-l5-only') {
 const {runEpubL5Tests} = await import('./epub-l5.e2e.mjs');
 await runEpubL5Tests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
   evaluate, open, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
+}
+
+if (!focus || focus === '--epub-l6-only') {
+const {runEpubL6Tests} = await import('./epub-l6.e2e.mjs');
+await runEpubL6Tests({api, chapter: await chapterOf('Livro EPUB CSS'), libraryId, route, check, until,
+  evaluate, open, key, send, sleep, bookModeKey: BOOK_MODE_KEY});
 }
 
 socket.close();

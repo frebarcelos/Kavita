@@ -129,6 +129,23 @@ public sealed record UserReadingProfileDto
     [Required]
     public bool BookReaderDisableBookmarkIcon { get; set; } = false;
 
+    /// <inheritdoc cref="Kavita.Models.Entities.User.AppUserReadingProfile.BookReaderJustify"/>
+    public bool BookReaderJustify { get; set; }
+
+    /// <inheritdoc cref="Kavita.Models.Entities.User.AppUserReadingProfile.BookReaderHyphenate"/>
+    public bool BookReaderHyphenate { get; set; }
+
+    /// <inheritdoc cref="Kavita.Models.Entities.User.AppUserReadingProfile.BookReaderParagraphSpacing"/>
+    [Range(0, 40)]
+    public int? BookReaderParagraphSpacing { get; set; }
+
+    /// <inheritdoc cref="Kavita.Models.Entities.User.AppUserReadingProfile.BookReaderTextIndent"/>
+    [Range(0, 40)]
+    public int? BookReaderTextIndent { get; set; }
+
+    /// <inheritdoc cref="Kavita.Models.Entities.User.AppUserReadingProfile.BookReaderIgnorePublisherStyles"/>
+    public bool BookReaderIgnorePublisherStyles { get; set; }
+
     #endregion
 
     #region PdfReader

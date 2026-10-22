@@ -18,6 +18,7 @@ import {
   signal,
   Signal,
   viewChild,
+  untracked,
   ViewContainerRef
 } from '@angular/core';
 import {DOCUMENT, NgClass, NgStyle, NgTemplateOutlet, PercentPipe} from '@angular/common';
@@ -77,6 +78,7 @@ import {Stack} from "../../../shared/data-structures/stack";
 import {EpubBookDecorationComponent} from '../epub-book-decoration/epub-book-decoration.component';
 import {EpubBookAnimationComponent} from '../epub-book/epub-book-animation.component';
 import {epubBookColumnGap} from '../epub-book/epub-book-layout';
+import {applyEpubTextOptions, EPUB_TEXT_OPTIONS_ID} from './epub-text-options';
 
 
 interface HistoryPoint {
@@ -924,6 +926,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
     // Remove any debug viewport things
     this.document.querySelector('#test')?.remove();
+    // Fork (L6): the text options stylesheet lives in the page head
+    this.document.getElementById(EPUB_TEXT_OPTIONS_ID)?.remove();
 
     this.themeService.clearBookTheme();
 
@@ -2162,6 +2166,8 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     pendingAnchor?.cancel();
     const resumeElement = (pendingAnchor ? pendingAnchor.selector : this.getFirstVisibleElementXPath()) || null;
     const resumeText = pendingAnchor ? pendingAnchor.text : this.getFirstVisibleTextRange();
+    // Fork (L6): the text options reflow the page too, so they go in after the reading place is taken
+    applyEpubTextOptions(this.document, bookContentElemRef.nativeElement, this.readerSettingsService.textOptions());
 
     // Needs to update the image size when reading mode is vertically
     this.updateImageSizes();
@@ -2342,6 +2348,10 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
     effect(() => {
       this.applyPageStyles(this.readerSettingsService.pageStyles());
+    }, { injector: injector });
+    effect(() => {
+      this.readerSettingsService.textOptions();
+      untracked(() => this.applyPageStyles(this.readerSettingsService.pageStyles()));
     }, { injector: injector });
     effect(() => {
       this.showPaginationOverlay(this.readerSettingsService.clickToPaginate());
