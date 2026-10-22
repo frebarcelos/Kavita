@@ -4,11 +4,11 @@ param(
     [string]$Destination = 'C:\KavitaBackups',
     [int]$KeepDaily = 7,
     [int]$KeepWeekly = 4,
-    [string]$ToolsImage = 'kavita-backup-tools:2'
+    [string]$ToolsImage = 'kavita-backup-tools:3'
 )
 $ErrorActionPreference = 'Stop'
 # Backs up the personal state of the running server, without stopping it: a consistent copy of kavita.db (SQLite
-# online backup, checked with integrity_check), the covers and the appsettings files. The cache is left out: Kavita
+# online backup, checked with integrity_check), the covers, the custom site themes and the appsettings files. The cache is left out: Kavita
 # rebuilds it. The library is never read. The archive holds the server secrets: keep the folder private.
 . (Join-Path $PSScriptRoot 'backup/retention.ps1')
 

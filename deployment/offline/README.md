@@ -165,7 +165,9 @@ Os scripts por versão (`apply-main-r*.ps1`) foram substituídos por dois script
 
 - **Backup:** `./deployment/offline/backup-config.ps1` copia do servidor em execução, sem pará-lo:
   - o `kavita.db`, pelo backup online do SQLite, conferido com `integrity_check`;
-  - as capas (`covers/`) e os `appsettings*.json`.
+  - as capas (`covers/`), os temas personalizados do site (`themes/`, desde 2026-10-22) e os `appsettings*.json`.
+
+  Sem `themes/`, um servidor restaurado responde "Theme file missing or invalid" para o tema escolhido. A ferramenta roda na imagem local `kavita-backup-tools:3`; ao mudar `backup/kavita-backup.sh`, troque a tag, porque a imagem só é construída quando não existe.
 
   O cache fica de fora. O destino padrão é `C:\KavitaBackups` (decisão do usuário: uma pasta do PC fora do Docker e do repositório), com `kavita-config-<data>.tar.gz` e `.sha256`. A retenção mantém o mais novo de cada um dos últimos 7 dias e de cada uma das 4 semanas anteriores.
 - **Atenção:** o arquivo contém os segredos do servidor (configuração e chaves no banco). Mantenha a pasta privada e não a versione.

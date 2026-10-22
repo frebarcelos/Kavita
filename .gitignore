@@ -552,3 +552,6 @@ API/config/bookmarks/
 
 # Configuração local do servidor offline (sem versionar caminhos/credenciais)
 /deployment/offline/.env
+
+# Fork: the backup tool folder; the Visual Studio rule Backup*/ above also matches it with core.ignorecase
+!/deployment/offline/backup/
