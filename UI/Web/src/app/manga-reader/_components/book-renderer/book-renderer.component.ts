@@ -145,7 +145,8 @@ export class BookRendererComponent {
       showCover: twoPages && cover,
       // Only the shadow of a page while it turns: the HTML mode has no fixed shadow between two open pages
       drawShadow,
-      maxShadowOpacity: 0.3,
+      // The shadow chosen with the user for the EPUB book (L2), shared by the image and PDF book (L7)
+      maxShadowOpacity: 0.5,
       flippingTime: 600,
       mobileScrollSupport: false,
       // A click in the middle opens the reader menu, as in the other renderers; corners and dragging still turn
@@ -164,6 +165,7 @@ export class BookRendererComponent {
         this.loadAround(this.currentPage);
         this.pageChange.emit(this.currentPage);
       }
+      this.updateSpine();
       const page = this.currentPage;
       // After the book has settled: opening or closing it inside its own flip event would redraw mid-turn
       queueMicrotask(() => {
@@ -173,6 +175,15 @@ export class BookRendererComponent {
     book.loadFromHTML(pages);
     loading = false;
     this.book = book;
+    this.updateSpine();
+  }
+
+  /** Fork (EPUB L7): the spine shows between two open pages; not on a lone cover, a wide page or a one-page book */
+  private updateSpine() {
+    if (this.root === null || this.layout === null) return;
+    const open = !this.portrait && !this.layout.isWide(this.currentPage)
+      && this.pagesInView(this.layout.slotOf(this.currentPage)).length === 2;
+    this.root.classList.toggle('book-spine', open);
   }
 
   private goTo(page: number) {
@@ -185,6 +196,7 @@ export class BookRendererComponent {
     const previous = this.currentPage;
     this.currentPage = page;
     this.loadAround(page);
+    this.updateSpine();
     // Open before turning onto a wide page, so it turns in as a whole; closing waits for the turn to end
     if (!this.wantsPortrait(page)) this.fitTo(page);
 
@@ -201,6 +213,7 @@ export class BookRendererComponent {
     const portrait = this.wantsPortrait(page);
     if (this.book === null || this.layout === null || portrait === this.portrait) return;
     this.setPortrait(portrait);
+    this.updateSpine();
     // Switching re-shows the page the engine was on, with flip events for places the reader never asked for; those
     // are not turns, and reporting them made the opening and closing chase each other without end
     this.adjusting = true;

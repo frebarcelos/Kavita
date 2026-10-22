@@ -69,6 +69,8 @@ Snapshot estrutural em 2026-10-17, antes desta documentação: 3854 arquivos for
 | Aparência sem perder o lugar (L3, implementação local em aceite) | âncora de texto e alinhamento da dupla em book-reader.component.ts; book-reader.pagination.spec.ts; scripts/e2e/epub-reflow.e2e.mjs; `scripts/e2e/run.ps1 -EpubReflowOnly` |
 | Seleção, destaques e links com o livro (L4, implementação local) | `closeSelection`, `turnTo` e `goToPart` em book-reader.component.ts; destinos distantes em epub-book-animation.component.ts; scripts/e2e/epub-l4.e2e.mjs; `scripts/e2e/run.ps1 -EpubL4Only` |
 | Ponta que dobra e arraste do canto (L5, implementação local) | `openCorner` em epub-book-animation.component.ts; `onBookPointer` e `.tap-to-paginate.epub-book-corner` em book-reader; scripts/e2e/epub-l5.e2e.mjs; `scripts/e2e/run.ps1 -EpubL5Only` |
+| Opções de texto (L6) | campos `BookReader*` novos em AppUserReadingProfile e UserReadingProfileDto; migração 20261022151310_EpubTextOptions; book-reader/_components/book-reader/epub-text-options.ts; controles em reader-settings; scripts/e2e/epub-l6.e2e.mjs |
+| Lombada nas imagens e no PDF (L7) | epub-book-decoration/_book-spine.scss; `book-spine` em manga-reader/_components/book-renderer |
 | Cliente HTTP web | UI/Web/src/app/_services, _interceptors e _models |
 | Kover Android | [Contexto próprio](KOVER_CONTEXT.md); código na pasta irmã ../kover |
 

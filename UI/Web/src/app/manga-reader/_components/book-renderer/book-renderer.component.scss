@@ -1,3 +1,5 @@
+@use '../../../book-reader/_components/epub-book-decoration/book-spine' as *;
+
 app-book-renderer {
   display: block;
 }
@@ -50,4 +52,11 @@ app-book-renderer .stf__wrapper.--landscape .stf__item.--left:not(.book-half-lef
 
 app-book-renderer .stf__wrapper.--landscape .stf__item.--right:not(.book-half-right) img {
   object-position: left center;
+}
+
+// Fork (EPUB L7): the spine of the EPUB book between two open pages
+app-book-renderer .book-spine::after {
+  content: '';
+  z-index: 5;
+  @include book-spine(rgb(0 0 0 / 24%));
 }

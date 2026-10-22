@@ -1,0 +1,9 @@
+// Fork: the spine between two open pages, shared by the EPUB book (L1) and the image and PDF book (L7)
+@mixin book-spine($shadow) {
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - 24px);
+  width: 48px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, $shadow 48%, rgb(255 255 255 / 8%) 51%, $shadow 54%, transparent);
+}

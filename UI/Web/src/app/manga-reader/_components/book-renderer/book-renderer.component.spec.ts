@@ -68,6 +68,33 @@ describe('Book renderer', () => {
     expect(books[0].root.querySelector('canvas')).toBeNull();
   });
 
+  describe('spine of the open book (EPUB L7)', () => {
+    const spine = (index = 0) => books[index].root.classList.contains('book-spine');
+
+    it('lays the spine between two open pages, never on a lone cover, a wide page or a one-page book', () => {
+      create({twoPages: true, pageNum: 3});
+      expect(spine(0)).toBe(true);
+      create({twoPages: true, pageNum: 0});
+      expect(spine(1)).toBe(false);
+      create({twoPages: true, pageNum: 3, wide: [3]});
+      expect(spine(2)).toBe(false);
+      create({pageNum: 4});
+      expect(spine(3)).toBe(false);
+    });
+
+    it('follows the turns: from the lone cover to an open pair', () => {
+      create({twoPages: true, pageNum: 0});
+      expect(spine()).toBe(false);
+      books[0].turnByHand(1);
+      expect(spine()).toBe(true);
+    });
+
+    it('turns with the stronger shadow approved for the EPUB book', () => {
+      create({twoPages: true});
+      expect(books[0].settings.maxShadowOpacity).toBe(0.5);
+    });
+  });
+
   it('leaves a click in the middle of the page to the reader menu; corners and dragging still turn', () => {
     create();
 

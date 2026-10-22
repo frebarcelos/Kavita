@@ -1,3 +1,5 @@
+@use 'book-spine' as *;
+
 :host {
   --epub-spine-shadow: rgb(0 0 0 / 24%);
   --epub-paper-edge: rgb(0 0 0 / 22%);
@@ -15,12 +17,7 @@
 }
 
 .epub-book-spine {
-  position: absolute;
-  inset-block: 0;
-  left: calc(50% - 24px);
-  width: 48px;
-  background: linear-gradient(90deg, transparent, var(--epub-spine-shadow) 48%,
-    rgb(255 255 255 / 8%) 51%, var(--epub-spine-shadow) 54%, transparent);
+  @include book-spine(var(--epub-spine-shadow));
 }
 
 .epub-book-edge {

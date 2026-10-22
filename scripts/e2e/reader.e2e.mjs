@@ -188,6 +188,31 @@ await sleep(2000);
 check(await progress(pdf.chapterId) === afterTurn, 'the book button keeps the page');
 check(await evaluate(`localStorage.getItem('${BOOK_MODE_KEY}')`) === 'true', 'the book button turns the book mode on');
 
+// EPUB L7: the image and PDF book has the spine of the EPUB book between two open pages
+const pdfProfile = await api(`/api/reading-profile/${libraryId}/${pdf.seriesId}`);
+const setLayout = layoutMode => api(`/api/reading-profile/series?libraryId=${libraryId}&seriesId=${pdf.seriesId}`,
+  {method: 'POST', body: {...pdfProfile, layoutMode}});
+const spine = () => evaluate(`(() => { const r = document.querySelector('app-book-renderer .stf__parent'); if (!r) return null;
+  const s = getComputedStyle(r, '::after'), b = r.getBoundingClientRect();
+  return {on: r.classList.contains('book-spine'), drawn: s.content !== 'none' && s.content !== 'normal',
+    offCentre: Math.abs(parseFloat(s.left) + parseFloat(s.width) / 2 - b.width / 2)}; })()`);
+async function openBook(layoutMode, page) {
+  await setLayout(layoutMode);
+  await setProgress(pdf, page);
+  await evaluate(`localStorage.setItem('${BOOK_MODE_KEY}', 'true'); true`);
+  await open(route('manga', pdf));
+  await until(async () => (await spine()) !== null, 20000, 200);
+  await sleep(1500);
+  return spine();
+}
+const open2 = await openBook(2, 3);
+check(open2?.on && open2.drawn && open2.offCentre < 2, `EPUB L7: two open PDF pages show the spine in the middle (${JSON.stringify(open2)})`);
+const cover = await openBook(2, 0);
+check(cover !== null && !cover.on, 'EPUB L7: the lone cover has no spine');
+const single = await openBook(1, 3);
+check(single !== null && !single.on, 'EPUB L7: a one-page book has no spine');
+await setLayout(pdfProfile.layoutMode);
+
 const {runEpubTests} = await import('./epub.e2e.mjs');
 await runEpubTests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
   evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
