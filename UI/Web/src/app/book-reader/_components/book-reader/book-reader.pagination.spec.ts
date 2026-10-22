@@ -183,7 +183,7 @@ describe('EPUB pagination before book presentation', () => {
     let complete!: () => void;
     const turn = vi.fn((_: unknown, commit: () => void) => { complete = commit; return true; });
     Object.assign(reader, {pagingRevision:0, bookModeActive:() => true, bookTwoPages:() => true,
-      bookAnimation:() => ({turn}), getVirtualPage:() => [2, 4, 1000],
+      bookAnimation:() => ({turn}), getVirtualPage:() => [2, 4, 1000], isLineOverlayOpen:() => false,
       bookContentElemRef:() => new ElementRef(document.createElement('div')),
       bookContainerElemRef:() => new ElementRef(document.createElement('div')),
       readingDirection:() => ReadingDirection.LeftToRight, nextPage:vi.fn(), prevPage:vi.fn()});
@@ -193,6 +193,57 @@ describe('EPUB pagination before book presentation', () => {
     complete();
     expect(reader.nextPage).toHaveBeenCalledTimes(1);
     expect(turn).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the selection menu before a book turn, so it cannot act on text that left the screen', () => {
+    const reader = Object.create(BookReaderComponent.prototype), order: string[] = [];
+    const turn = vi.fn(() => { order.push('turn'); return true; });
+    Object.assign(reader, {pagingRevision:0, bookModeActive:() => true, bookTwoPages:() => true,
+      bookAnimation:() => ({turn}), getVirtualPage:() => [2, 4, 1000], isLineOverlayOpen:() => true,
+      lineOverlay:() => ({reset: () => order.push('reset')}),
+      bookContentElemRef:() => new ElementRef(document.createElement('div')),
+      bookContainerElemRef:() => new ElementRef(document.createElement('div')),
+      readingDirection:() => ReadingDirection.LeftToRight, nextPage:vi.fn(), prevPage:vi.fn()});
+    reader.movePage(PAGING_DIRECTION.FORWARD);
+    expect(order).toEqual(['reset', 'turn']);
+  });
+
+  it('turns straight to the spread of a target in the same HTML and lands there', () => {
+    const content = document.createElement('div');
+    content.innerHTML = '<p id="p70">Destino</p>';
+    const target = content.querySelector('p')!;
+    vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({left: 0} as DOMRect);
+    vi.spyOn(target, 'getClientRects').mockImplementation(() => [{left: 3500 - content.scrollLeft}] as unknown as DOMRectList);
+    let complete!: () => void;
+    const turn = vi.fn((_: unknown, commit: () => void) => { complete = commit; return true; });
+    const reader = Object.create(BookReaderComponent.prototype);
+    Object.assign(reader, {pagingRevision:0, bookModeActive:() => true, bookTwoPages:() => true,
+      writingStyle:() => WritingStyle.Horizontal, readingDirection:() => ReadingDirection.LeftToRight,
+      bookAnimation:() => ({turn, cancel: vi.fn()}), getVirtualPage:() => [1, 5, 1000], isLineOverlayOpen:() => false,
+      lineOverlay:() => undefined, getElementFromXPath:() => target, handleScrollEvent: vi.fn(),
+      bookContentElemRef:() => new ElementRef(content),
+      bookContainerElemRef:() => new ElementRef(document.createElement('div')),
+      scrollService:{scrollToX: (offset: number, element: HTMLElement, _: string, done: () => void) => {
+        element.scrollLeft = offset; done();
+      }}});
+    expect(reader.turnTo('#p70')).toBe(true);
+    expect(turn).toHaveBeenCalledWith(expect.objectContaining({current: 0, target: 3, stride: 1000, columns: 2}), expect.any(Function));
+    expect(content.scrollLeft).toBe(0);
+    complete();
+    expect(content.scrollLeft).toBe(3000);
+    expect(reader.handleScrollEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a contents or annotation target in the open HTML with a turn, and other HTML files as before', () => {
+    const reader = Object.create(BookReaderComponent.prototype);
+    Object.assign(reader, {pageNum: signal(4), turnTo: vi.fn(() => true), setPageNum: vi.fn(), loadPage: vi.fn(),
+      readerService: {scopeBookReaderXpath: (part: string) => `scoped:${part}`}});
+    reader.goToPart(4, "id('p50')");
+    expect(reader.turnTo).toHaveBeenCalledWith("scoped:id('p50')");
+    expect(reader.loadPage).not.toHaveBeenCalled();
+    reader.goToPart(5, "id('p50')");
+    expect(reader.setPageNum).toHaveBeenCalledWith(5);
+    expect(reader.loadPage).toHaveBeenCalledWith("id('p50')");
   });
 
   it('leaves the HTML boundary to the original next/previous file navigation', () => {

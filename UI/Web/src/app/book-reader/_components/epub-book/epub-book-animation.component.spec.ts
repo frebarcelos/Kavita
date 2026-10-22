@@ -54,6 +54,22 @@ describe('EPUB transient page turn', () => {
     expect(books[0].flip).toHaveBeenCalledWith(2);
   });
 
+  it('turns straight to a distant spread of the same HTML, as when following a link', () => {
+    const {component, request, commit} = create();
+    expect(component.turn({...request, current:0, target:3}, commit)).toBe(true);
+    const lefts = books[0].pages.map(page => page.querySelector<HTMLElement>('.book-content')?.style.left);
+    // Spreads 0 and 3 only, each as its two half pages
+    expect(lefts).toEqual(['0px', '0px', '-4608px', '-4608px']);
+    frame(0);
+    expect(books[0].flip).toHaveBeenCalledWith(2);
+  });
+
+  it('refuses a turn to the spread already on screen', () => {
+    const {component, request, commit} = create();
+    expect(component.turn({...request, target:0}, commit)).toBe(false);
+    expect(books).toHaveLength(0);
+  });
+
   it('ignores initial/flip events and commits once only when the animation settles', async () => {
     const {component, request, commit} = create();
     component.turn(request, commit);

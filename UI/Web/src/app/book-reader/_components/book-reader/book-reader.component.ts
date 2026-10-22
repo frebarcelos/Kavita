@@ -354,6 +354,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   /** Fork (L3): text anchor whose restoration after an appearance change is still waiting for the next frame */
   private pendingAnchorRestore: {selector: string | null, text: Range | null, cancel: () => void} | null = null;
   protected readonly bookAnimation = viewChild(EpubBookAnimationComponent);
+  private readonly lineOverlay = viewChild(BookLineOverlayComponent);
   private lastBookWheel = -Infinity;
 
   /**
@@ -1275,7 +1276,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
         const href = link.getAttribute('href') ?? '';
         if (href.startsWith('#')) {
           e.preventDefault();
-          this.scrollTo(href);
+          if (!this.turnTo(href)) this.scrollTo(href);
           return;
         }
 
@@ -1290,7 +1291,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
 
         const partValue = targetElem.attributes.hasOwnProperty('kavita-part') ? targetElem.attributes['kavita-part'].value : undefined;
         if (partValue && page === this.pageNum()) {
-          this.scrollTo(targetElem.attributes['kavita-part'].value);
+          if (!this.turnTo(partValue)) this.scrollTo(partValue);
           return;
         }
 
@@ -1686,6 +1687,49 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
   }
 
   /**
+   * Fork (L4): with the book on, a target in the open HTML is reached with one turn, instead of a jump.
+   * @returns false when the book is off or the target is not on another spread, so the caller keeps its own jump
+   */
+  turnTo(selector: string): boolean {
+    if (!this.bookModeActive() || this.writingStyle() !== WritingStyle.Horizontal) return false;
+    const element = this.getElementFromXPath(selector) as HTMLElement | null;
+    const content = this.bookContentElemRef()?.nativeElement;
+    const rect = element?.getClientRects()[0];
+    if (!content || !rect) return false;
+
+    const [current, total, stride] = this.getVirtualPage();
+    if (stride <= 0) return false;
+    const position = rect.left - content.getBoundingClientRect().left + content.scrollLeft;
+    const target = Math.min(total, Math.floor(Math.max(0, position) / stride) + 1);
+    if (target === current) return false;
+
+    this.bookAnimation()?.cancel();
+    this.closeSelection();
+    this.pagingRevision++;
+    const land = () => this.scrollService.scrollToX((target - 1) * stride, content, 'auto',
+      () => this.handleScrollEvent(), {tolerance: 3, timeout: 2000});
+    if (!this.bookAnimation()?.turn({
+      source: content, area: this.bookContainerElemRef().nativeElement,
+      current: current - 1, target: target - 1, stride, columns: this.bookTwoPages() ? 2 : 1,
+      rightToLeft: this.readingDirection() === ReadingDirection.RightToLeft,
+    }, land)) land();
+    return true;
+  }
+
+  /** Fork (L4): contents, annotations and bookmarks in the open HTML turn to their target; other HTML files load as before */
+  goToPart(pageNumber: number, part?: string | null) {
+    if (pageNumber === this.pageNum() && part && this.turnTo(this.readerService.scopeBookReaderXpath(part))) return;
+    this.setPageNum(pageNumber);
+    this.loadPage(part ?? undefined);
+  }
+
+  /** Fork (L4): a turn moves the text away from the selection; its menu would act on text no longer on screen */
+  private closeSelection() {
+    if (this.isLineOverlayOpen()) this.lineOverlay()?.reset();
+    window.getSelection()?.removeAllRanges();
+  }
+
+  /**
    * Given a direction, calls the next or prev page method
    * @param direction Direction to move
    */
@@ -1700,6 +1744,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
       if (this.bookAnimation()?.isTurning) return;
       const [current, total, stride] = this.getVirtualPage();
       const target = current + (direction === PAGING_DIRECTION.FORWARD ? 1 : -1);
+      if (target >= 1 && target <= total) this.closeSelection();
       if (target >= 1 && target <= total && this.bookAnimation()?.turn({
         source: this.bookContentElemRef().nativeElement, area: this.bookContainerElemRef().nativeElement,
         current: current - 1, target: target - 1, stride, columns: this.bookTwoPages() ? 2 : 1,
@@ -2611,9 +2656,10 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
       if (res === null) return;
 
       if (action === 'loadPage') {
-        this.setPageNum(res.page);
         if (res.xPath != null) {
-          this.loadPage(res.xPath);
+          this.goToPart(res.page, res.xPath);
+        } else {
+          this.setPageNum(res.page);
         }
         return;
       } else if (action === 'removeBookmark') {
@@ -2622,21 +2668,18 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     }, (res: LoadPageEvent) => {
         if (res === null) return;
 
-        this.setPageNum(res.pageNumber);
-        this.loadPage(res.part);
+        this.goToPart(res.pageNumber, res.part);
     });
   }
 
   async viewAnnotations() {
     await this.epubMenuService.openViewAnnotationsDrawer((annotation: Annotation) => {
       const currentPageNum = this.pageNum();
-      if (this.pageNum() != annotation.pageNumber) {
-        this.setPageNum(annotation.pageNumber);
-      }
-
       if (annotation.xPath != null) {
         this.adhocPageHistory.push({page: currentPageNum, scrollPart: this.readerService.scopeBookReaderXpath(this.lastSeenScrollPartPath)});
-        this.loadPage(annotation.xPath);
+        this.goToPart(annotation.pageNumber, annotation.xPath);
+      } else if (this.pageNum() != annotation.pageNumber) {
+        this.setPageNum(annotation.pageNumber);
       }
     });
   }
@@ -2645,8 +2688,7 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     this.epubMenuService.openViewTocDrawer(this.chapterId, this.pageNum(), (res: LoadPageEvent | null) => {
       if (res === null) return;
 
-      this.setPageNum(res.pageNumber);
-      this.loadPage(res.part);
+      this.goToPart(res.pageNumber, res.part);
     });
   }
 

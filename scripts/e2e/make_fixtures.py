@@ -5,7 +5,8 @@
 Creates, under the folder:
   Livro PDF/Livro PDF - 01.pdf   8 portrait pages, each with its number
   Revista/Revista - 01.cbz       8 portrait pages, page 4 (index 3) wide (a spread in one file)
-  Livro EPUB/Livro EPUB - 01.epub  two HTML files with synthetic paragraphs
+  Livro EPUB/Livro EPUB - 01.epub  two HTML files with synthetic paragraphs; the first links
+                                   to its own paragraphs, also from the contents
 Only the standard library is used.
 """
 import struct
@@ -89,7 +90,8 @@ def epub(path: Path, publisher_css: bool = False) -> None:
                          '<spine><itemref idref="c1"/><itemref idref="c2"/></spine></package>')
         archive.writestr("OEBPS/nav.xhtml", '<html xmlns="http://www.w3.org/1999/xhtml" '
                          'xmlns:epub="http://www.idpf.org/2007/ops"><head><title>Índice</title></head>'
-                         '<body><nav epub:type="toc"><ol><li><a href="c1.xhtml">Parte 1</a></li>'
+                         '<body><nav epub:type="toc"><ol><li><a href="c1.xhtml">Parte 1</a>'
+                         '<ol><li><a href="c1.xhtml#p50">Trecho 50</a></li></ol></li>'
                          '<li><a href="c2.xhtml">Parte 2</a></li></ol></nav></body></html>')
         for chapter in (1, 2):
             paragraphs = ''.join(f'<p id="p{n}">Trecho {n:03d}. ' +
@@ -101,9 +103,12 @@ def epub(path: Path, publisher_css: bool = False) -> None:
             extra = ('<aside class="publisher-fixed" data-probe="fixed">Nota fixa do editor</aside>'
                      '<section class="publisher-columns"><p>Colunas internas do editor.</p>'
                      '<p>Segunda coluna interna.</p></section>') if publisher_css else ''
+            # L4: links inside the same HTML, by fragment and by file name
+            links = ('<p id="links"><a href="#p70">Ir ao trecho 70</a> · <a href="c1.xhtml#p80">Ir ao trecho 80</a></p>'
+                     if chapter == 1 and not publisher_css else '')
             archive.writestr(f"OEBPS/c{chapter}.xhtml", '<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">'
                              f'<head><title>Parte {chapter}</title>{styles}</head><body>{extra}<h1>Parte {chapter}</h1>' +
-                             paragraphs + '</body></html>')
+                             links + paragraphs + '</body></html>')
 
 
 def main() -> None:

@@ -274,3 +274,24 @@ O usuário apontou dois pontos no principal:
 RED: unidade (`epub-book-layout.spec.ts`, 64 em vez de 224) e e2e (meio de 64 px com margem de 160 px; imagem sem mistura no tema Papel). GREEN: 133 testes web e **147/147 checks e2e** com `-MeasureEpubClipping`, inclusive recorte sem diferenças e, com margem de 160 px, meio de 384 px. Na mesma rodada, o roteiro passou a esperar todas as pastas da fixture: esperar só as do PDF e do EPUB começava os cenários de PDF antes do fim do scan e reprovava oito checks de PDF.
 
 Em 2026-10-22, após o deploy de `kavita-fork:fork-v1.1-50-g11986f5fd`, **o usuário confirmou no principal** que a capitular no tema Papel e a margem junto à lombada funcionam.
+
+## L4: destaques, seleção e links com o livro
+
+Implementação local de 2026-10-22, sem deploy. Cenário novo: [epub-l4.e2e.mjs](../../scripts/e2e/epub-l4.e2e.mjs) (`run.ps1 -EpubL4Only`). A fixture ganhou, no primeiro HTML, um link por fragmento (`#p70`), um link pelo nome do arquivo (`c1.xhtml#p80`) e um item de sumário para `c1.xhtml#p50`.
+
+Caracterização no código em produção (RED):
+
+- a virada não fechava a seleção nem o menu de seleção. Com o menu aberto, ele guardava o contexto da seleção anterior, e um destaque criado logo depois foi gravado com o texto novo e o XPath do parágrafo antigo;
+- link interno, link para o mesmo arquivo e item do sumário saltavam sem virada (o sumário recarregava o HTML).
+
+Correções:
+
+1. `closeSelection()` antes de cada virada do livro (menu `reset()` e seleção limpa).
+2. `turnTo(destino)`: com o livro ligado e o destino noutra dupla do HTML aberto, uma única virada leva até a dupla do destino e salva o progresso uma vez; sem livro, com movimento reduzido ou destino na dupla atual, o comportamento anterior. A animação passou a aceitar duplas não vizinhas.
+3. `goToPart(página, parte)`: sumário, anotações, marcadores e sumário pessoal usam `turnTo` quando o destino está no HTML aberto; outro HTML continua carregando como antes, sem animação entre arquivos.
+
+Os destaques já faziam parte do HTML clonado: a folha que vira mostra o destaque com a mesma cor do leitor (`rgba(0, 255, 255, 0.4)`), e voltar a página o mantém. Não existe busca dentro do livro no leitor de EPUB.
+
+Durante o ensaio, uma correção para manter o deslocamento ao recarregar o HTML depois de criar um destaque foi escrita e **revertida**: o diagnóstico mostrou que o leitor não mudava de dupla (3328 → 3328) e que a falha vinha do próprio teste, que selecionava um parágrafo começado na dupla anterior. O seletor do teste foi corrigido.
+
+Resultado: 138 testes web (inclusive animação até dupla distante, fechamento do menu antes da virada, `turnTo` e `goToPart`), lint sem erros e **164/164 checks e2e** com `-MeasureEpubClipping`, contra a imagem `kavita-fork:fork-v1.1-50-g11986f5fd` com a interface local. Sem aceite visual e sem deploy.

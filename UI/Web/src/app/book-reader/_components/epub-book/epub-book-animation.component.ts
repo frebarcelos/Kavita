@@ -51,7 +51,8 @@ export class EpubBookAnimationComponent {
   /** True means this command is handled. Repeated commands during a turn are absorbed. */
   turn(request: EpubBookTurn, commit: () => void): boolean {
     if (this.session) return true;
-    if (this.motion?.matches || request.stride <= 0 || Math.abs(request.current - request.target) !== 1) return false;
+    // The destination may be any other spread of the HTML: a link or the contents turn straight to it
+    if (this.motion?.matches || request.stride <= 0 || request.current === request.target) return false;
     const rect = request.area.getBoundingClientRect(), content = request.source.getBoundingClientRect();
     if (rect.width <= 0 || content.height <= 0) return false;
     const geometry: EpubPageGeometry = {width: rect.width / request.columns, height: content.height,

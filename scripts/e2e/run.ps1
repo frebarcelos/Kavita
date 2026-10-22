@@ -11,7 +11,9 @@ param(
     # L2.2: also validate publisher CSS clipping with the real engine
     [switch]$MeasureEpubClipping,
     # Focused RED/GREEN for appearance preservation; the ordinary runner still runs all reader scenarios
-    [switch]$EpubReflowOnly
+    [switch]$EpubReflowOnly,
+    # Focused RED/GREEN for selection, highlights and navigation with the book on (L4)
+    [switch]$EpubL4Only
 )
 $ErrorActionPreference = 'Stop'
 # Fork (item 7.1): reader end-to-end test. A disposable Kavita on 127.0.0.1 with a synthetic library mounted read-only
@@ -82,6 +84,7 @@ try {
     $readerArgs = @("http://127.0.0.1:$Port", $DebugPort)
     if ($MeasureEpubClipping) { $readerArgs += '--epub-clipping' }
     if ($EpubReflowOnly) { $readerArgs += '--epub-reflow-only' }
+    if ($EpubL4Only) { $readerArgs += '--epub-l4-only' }
     npm exec --yes --package=node@24.15.0 -- node scripts/e2e/reader.e2e.mjs @readerArgs
     $failed = $LASTEXITCODE -ne 0
 } finally {
