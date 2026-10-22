@@ -26,12 +26,17 @@ async function until(probe, timeoutMs, stepMs = 500) {
 // --- Server: account, library and the chapters under test ---
 let token = '';
 let browserHeaders = {};
-async function api(route, {method = 'GET', body} = {}) {
+async function api(route, {method = 'GET', body} = {}, attempt = 0) {
   const response = await fetch(server + route, {
     method,
     headers: {...browserHeaders, ...(token ? {Authorization: 'Bearer ' + token} : {}), ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  // The fork limits progress saves of one chapter to one per 300 ms; a test save right after the browser's waits it out
+  if (response.status === 429 && attempt < 5) {
+    await sleep(350);
+    return api(route, {method, body}, attempt + 1);
+  }
   if (!response.ok) throw new Error(`HTTP ${response.status} on ${method} ${route.split('?')[0]}`);
   const text = await response.text();
   return text ? JSON.parse(text) : null;
@@ -51,7 +56,8 @@ const libraryId = library?.id ?? (await api('/api/Library/libraries')).find(l =>
 await api(`/api/Library/scan?libraryId=${libraryId}&force=true`, {method: 'POST'});
 const folders = await until(async () => {
   const rows = await api(`/api/Library/folder-series?libraryId=${libraryId}`);
-  return rows.length >= 3 ? rows : null;
+  // Wait for the folders the scenarios use, not for a count: the publisher CSS fixture adds folders
+  return ['Livro PDF', 'Livro EPUB'].every(folder => rows.some(row => row.path === folder)) ? rows : null;
 }, 120000, 2000);
 if (!folders) throw new Error('The scan did not index the fixtures.');
 async function chapterOf(folder) {
