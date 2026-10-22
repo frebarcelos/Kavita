@@ -14,10 +14,10 @@ Validação mais recente da L2: **126 testes web e 107 checks e2e passaram** (58
 
 ### Servidor (PC)
 
-- **Imagem:** `kavita-fork:fork-v1.1-47-gfeb77a016`, em produção desde 2026-10-22 09:12, com autorização do usuário.
-  - Contém o modo livro no PDF da web, as páginas de PDF sob demanda, o EPUB como livro (L1 a L3) e a posição salva no primeiro HTML do EPUB.
-  - Antes do deploy: e2e completo contra a imagem (143 checks); depois: health, HTTPS 200, montagens somente leitura e interface nova conferidos.
-  - Rollback: checkpoint `kavita-checkpoint-kavita-offline-f1-20261022-091216` e imagem anterior `kavita-fork:fork-v1.1-36-g9feb36c54`. O deploy foi interrompido após subir a imagem (stderr redirecionado por engano), então a retenção não rodou: há 3 checkpoints, e o próximo deploy volta a manter 2.
+- **Imagem:** `kavita-fork:fork-v1.1-50-g11986f5fd`, em produção desde 2026-10-22 10:08, com autorização do usuário.
+  - Contém o modo livro no PDF da web, as páginas de PDF sob demanda, o EPUB como livro (L1 a L3, com margem junto à lombada e capitulares misturadas ao papel) e a posição salva no primeiro HTML do EPUB.
+  - Antes do deploy: e2e completo contra a imagem (147 checks); depois: health, HTTPS 200, montagens somente leitura e interface nova conferidos.
+  - Rollback: checkpoints `kavita-checkpoint-kavita-offline-f1-20261022-100805` (antes desta imagem) e `...-20261022-091216`; imagens anteriores `kavita-fork:fork-v1.1-47-gfeb77a016` e `kavita-fork:fork-v1.1-36-g9feb36c54`. A retenção voltou a manter 2 checkpoints.
 - **Containers do projeto Compose `kavita-offline-f1`:**
   - `kavita`: HTTP só em `127.0.0.1:5000`, para manutenção no próprio PC;
   - `https`: proxy Caddy, só em `192.168.1.113:5443`, com autoridade certificadora local.
