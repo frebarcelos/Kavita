@@ -4,7 +4,7 @@ Atualizado em 2026-10-21. Este é o resumo para retomar o trabalho. O detalhe it
 
 ## Alteração local em revisão (2026-10-21)
 
-EPUB como livro na web: **L1 e L2 aprovadas visualmente pelo usuário em 2026-10-21**, sem deploy. A L2 mantém texto vivo: após a reprovação inicial do recorte, o usuário escolheu corrigi-lo, e a geometria agora coincide com o leitor, inclusive no maior EPUB e no CSS de editor. A camada PageFlip existe somente durante a virada; no fim o leitor avança e salva uma vez. Uma/duas páginas, LTR/RTL, teclado, roda, botão e toque passaram no Chrome. Movimento reduzido usa o salto imediato da L1. **L3 aprovada pelo usuário em 2026-10-22, sem deploy**: mudar fonte, entrelinha, margem, tema ou layout, inclusive durante uma virada, mantém o texto do topo da dupla (decisão do usuário de 2026-10-21); 130 testes web e 137 checks e2e passaram. Visual aprovado pelo usuário numa prévia local com o acervo real; o defeito das colunas vizinhas durante a virada foi corrigido (131 testes web, 143 checks e2e). Achado da prévia, corrigido em 2026-10-22 com autorização: o backup automático passou a incluir `config/themes` (tema personalizado do site); teste de backup/restauração com 12 checks verde e backup real do principal conferido com o tema. Consulte [a validação](../validation/EPUB_LIVRO.md) e [o plano](../plans/EPUB_LIVRO.md). L4 e L5 não iniciadas; L6 exige escolher as opções de texto, e L7 é opcional.
+EPUB como livro na web: **L1 e L2 aprovadas visualmente pelo usuário em 2026-10-21**, sem deploy. A L2 mantém texto vivo: após a reprovação inicial do recorte, o usuário escolheu corrigi-lo, e a geometria agora coincide com o leitor, inclusive no maior EPUB e no CSS de editor. A camada PageFlip existe somente durante a virada; no fim o leitor avança e salva uma vez. Uma/duas páginas, LTR/RTL, teclado, roda, botão e toque passaram no Chrome. Movimento reduzido usa o salto imediato da L1. **L3 aprovada pelo usuário em 2026-10-22 e implantada no principal no mesmo dia**: mudar fonte, entrelinha, margem, tema ou layout, inclusive durante uma virada, mantém o texto do topo da dupla (decisão do usuário de 2026-10-21); 130 testes web e 137 checks e2e passaram. Visual aprovado pelo usuário numa prévia local com o acervo real; o defeito das colunas vizinhas durante a virada foi corrigido (131 testes web, 143 checks e2e). Achado da prévia, corrigido em 2026-10-22 com autorização: o backup automático passou a incluir `config/themes` (tema personalizado do site); teste de backup/restauração com 12 checks verde e backup real do principal conferido com o tema. Consulte [a validação](../validation/EPUB_LIVRO.md) e [o plano](../plans/EPUB_LIVRO.md). L4 e L5 não iniciadas; L6 exige escolher as opções de texto, e L7 é opcional.
 
 Validação local: 104 testes web, 94 de leitura/releitura no servidor e 58 checks e2e (16 PDF + 42 EPUB) passaram. O ensaio corrigiu também a perda de posição no primeiro HTML do EPUB: `pageNum == 0` com `bookScrollId` válido agora é salvo. Contrato de progresso e Kover mantidos. Há capturas sintéticas no registro; a imagem usada no e2e é descartável e não serve para deploy.
 
@@ -14,9 +14,10 @@ Validação mais recente da L2: **126 testes web e 107 checks e2e passaram** (58
 
 ### Servidor (PC)
 
-- **Imagem:** `kavita-fork:fork-v1.1-36-g9feb36c54`.
-  - Contém o modo livro no PDF da web e as páginas de PDF sob demanda.
-  - Deploy e teste feitos pelo usuário em 2026-10-20.
+- **Imagem:** `kavita-fork:fork-v1.1-47-gfeb77a016`, em produção desde 2026-10-22 09:12, com autorização do usuário.
+  - Contém o modo livro no PDF da web, as páginas de PDF sob demanda, o EPUB como livro (L1 a L3) e a posição salva no primeiro HTML do EPUB.
+  - Antes do deploy: e2e completo contra a imagem (143 checks); depois: health, HTTPS 200, montagens somente leitura e interface nova conferidos.
+  - Rollback: checkpoint `kavita-checkpoint-kavita-offline-f1-20261022-091216` e imagem anterior `kavita-fork:fork-v1.1-36-g9feb36c54`. O deploy foi interrompido após subir a imagem (stderr redirecionado por engano), então a retenção não rodou: há 3 checkpoints, e o próximo deploy volta a manter 2.
 - **Containers do projeto Compose `kavita-offline-f1`:**
   - `kavita`: HTTP só em `127.0.0.1:5000`, para manutenção no próprio PC;
   - `https`: proxy Caddy, só em `192.168.1.113:5443`, com autoridade certificadora local.
@@ -107,7 +108,7 @@ Números das suítes na última execução: Kavita serviços 3046 (sem falhas), 
 
 **Fora do escopo por enquanto:**
 - V3: não é necessário, porque o V2 resolveu o tempo;
-- V4: L4 a L7 do [EPUB como livro no PC](../plans/EPUB_LIVRO.md); L1 a L3 estão aprovadas, sem deploy;
+- V4: L4 a L7 do [EPUB como livro no PC](../plans/EPUB_LIVRO.md); L1 a L3 estão aprovadas e implantadas;
 - as melhorias futuras F1 a F19 do plano.
 
 ## Cuidados aprendidos nesta fase
