@@ -8,7 +8,7 @@ Criado em 2026-10-21. Detalha o item V4 do [plano de robustez](ROBUSTEZ_E_MELHOR
 - **L2 aprovada visualmente pelo usuário em 2026-10-21:** recorte com texto vivo, PageFlip somente durante a virada e confirmação única ao terminar. Passaram 126 testes web e 107 checks e2e; a medição final no maior EPUB teve zero divergências, montagem em até 14,8 ms e virada em 652 ms. Sombra inicial em 0,5 aceita.
 - **L3 aprovada pelo usuário em 2026-10-22** (prévia local com o acervo real; corrigidas as colunas vizinhas durante a virada): ao mudar a aparência o leitor mantém o texto que estava no topo da dupla, alinha a dupla inteira, restaura antes de um comando imediato e também durante uma virada interrompida. Passaram 130 testes web e 137 checks e2e. Decisão do usuário em 2026-10-21: quando o texto do topo e o elemento do `bookScrollId` não cabem juntos, vale o texto do topo (L3.1 revisada). L4 e L5 não iniciadas.
 - **L4 implantada no principal em 2026-10-22 (`kavita-fork:fork-v1.1-53-g9b31efd1d`) e aceita pelo usuário:** a virada fecha a seleção e o menu; destaques aparecem nas folhas que viram; links internos, sumário, anotações, marcadores e sumário pessoal com destino no HTML aberto viram até ele com uma única virada. Não há busca dentro do livro no leitor de EPUB; o item da busca não se aplica. 138 testes web e 164 checks e2e.
-- **L5 implementada localmente em 2026-10-22, aguardando aceite no PC e deploy:** a ponta da página levanta sob o mouse perto de um canto externo; arrastar além da lombada vira, soltar antes volta sem gravar; o canto esquerdo volta uma dupla; no fim do HTML, o arraste abre o arquivo seguinte. A camada de toque libera o mouse só enquanto o livro está sob ele. Não depende mais do item 6.8: a solução é própria do leitor de EPUB. 147 testes web e 174 checks e2e.
+- **L5 implantada no principal em 2026-10-22 (`kavita-fork:fork-v1.1-56-g29db2c653`), aguardando aceite no PC:** a ponta da página levanta sob o mouse perto de um canto externo; arrastar além da lombada vira, soltar antes volta sem gravar; o canto esquerdo volta uma dupla; no fim do HTML, o arraste abre o arquivo seguinte. A camada de toque libera o mouse só enquanto o livro está sob ele. Não depende mais do item 6.8: a solução é própria do leitor de EPUB. 147 testes web e 174 checks e2e.
 - **L6 pendente da escolha da lista de opções (L6.1). L7 continua opcional.**
 - Nenhum deploy no principal nem mudança no Kover nesta entrega.
 
@@ -135,7 +135,7 @@ Cada entrega vai da interface ao teste ponta a ponta e pode ir para produção s
 
 | Tarefa | Descrição |
 | --- | --- |
-| L6.1 | **Decisão do usuário:** escolher a lista. Candidatas: alinhamento justificado, hifenização, espaçamento entre parágrafos, recuo da primeira linha e "ignorar estilos do livro". |
+| L6.1 | **Decidido pelo usuário em 2026-10-22:** as cinco candidatas, guardadas no perfil de leitura do servidor: alinhamento justificado, hifenização, espaçamento entre parágrafos, recuo da primeira linha e "ignorar estilos do livro". |
 | L6.2 | Campos no perfil de leitura do servidor, com migração e teste de compatibilidade com o Kover, que não usa esses campos. |
 | L6.3 | Uma opção por vez no leitor, cada uma com seu teste RED e cenário e2e, repaginando como na L3 quando o livro estiver ligado. |
 
