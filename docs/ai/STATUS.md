@@ -85,8 +85,8 @@ Números das suítes na última execução: Kavita serviços 3046 (sem falhas), 
    - direção e layout por série (6.5);
    - `cacheWidth` pela tela e PDF lido do arquivo (6.6).
 3. **Progresso por pasta e trilha de volta**, no tablet e na web (6.7 e 6.11, MELHORIAS 3 e 4).
-4. **Acabamento do modo livro na web:**
-   - arrastar o canto (6.8);
+4. **Acabamento do modo livro na web** (o V4, EPUB como livro L1 a L7, foi concluído e implantado em 2026-10-22; falta o aceite do usuário para L5 a L7):
+   - arrastar o canto nas imagens e no PDF (6.8); no EPUB já existe (L5);
    - medir os renderizadores escondidos (6.9);
    - última página abre o próximo capítulo (6.10).
 5. **Robustez:**
@@ -104,12 +104,12 @@ Números das suítes na última execução: Kavita serviços 3046 (sem falhas), 
    - nomes genéricos no lugar de títulos do acervo nos registros versionados.
 7. **Administração:**
    - push do Kover (aguarda o usuário);
+   - push dos commits do Kavita em `fork/v1.0` (aguarda o usuário);
    - conferir a CI no GitHub;
    - a raiz da autoridade vale até 2036.
 
 **Fora do escopo por enquanto:**
 - V3: não é necessário, porque o V2 resolveu o tempo;
-- V4: L4 a L7 do [EPUB como livro no PC](../plans/EPUB_LIVRO.md); L1 a L3 estão aprovadas e implantadas;
 - as melhorias futuras F1 a F19 do plano.
 
 ## Cuidados aprendidos nesta fase
