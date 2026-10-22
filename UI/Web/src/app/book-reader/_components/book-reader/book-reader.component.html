@@ -19,7 +19,7 @@
     </div>
 
     @if (clickToPaginate() && !hidePagination()) {
-      <div class="tap-to-paginate">
+      <div class="tap-to-paginate" [class.epub-book-corner]="bookAnimation()?.cornerOpen()">
         <div class="left {{clickOverlayClass('left')}} no-observe"
             (click)="movePage(isLeftToRight ? PAGING_DIRECTION.BACKWARDS : PAGING_DIRECTION.FORWARD)"
             [ngClass]="{'immersive' : immersiveMode()}"

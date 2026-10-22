@@ -246,6 +246,54 @@ describe('EPUB pagination before book presentation', () => {
     expect(reader.loadPage).toHaveBeenCalledWith("id('p50')");
   });
 
+  describe('corner under the mouse (L5)', () => {
+    function readerWithCorner(overrides: Record<string, unknown> = {}) {
+      const container = document.createElement('div'), content = document.createElement('div');
+      container.getBoundingClientRect = () => ({left: 0, right: 1600, width: 1600, top: 0, bottom: 950}) as DOMRect;
+      content.getBoundingClientRect = () => ({left: 64, right: 1536, top: 38, bottom: 912, height: 874}) as DOMRect;
+      let onTurn!: (forward: boolean) => void;
+      const openCorner = vi.fn((_: unknown, callback: (forward: boolean) => void) => { onTurn = callback; return true; });
+      const reader = Object.create(BookReaderComponent.prototype);
+      Object.assign(reader, {bookModeActive: () => true, bookTwoPages: () => true, writingStyle: () => WritingStyle.Horizontal,
+        readingDirection: () => ReadingDirection.LeftToRight, isLoading: () => false, pagingRevision: 0,
+        bookAnimation: () => ({openCorner, cornerOpen: () => false, isTurning: false}),
+        epubMenuService: {isDrawerOpen: () => false}, getVirtualPage: () => [2, 5, 1536],
+        bookContainerElemRef: () => new ElementRef(container), bookContentElemRef: () => new ElementRef(content),
+        nextPage: vi.fn(), prevPage: vi.fn(), ...overrides});
+      return {reader, openCorner, turn: (forward: boolean) => onTurn(forward)};
+    }
+    const at = (x: number, y: number, buttons = 0) => new MouseEvent('mousemove', {clientX: x, clientY: y, buttons});
+
+    it('mounts the book under the mouse near an outer corner of the spread, and turns like the arrows', () => {
+      const {reader, openCorner, turn} = readerWithCorner();
+      reader.onBookPointer(at(1590, 900));
+      expect(openCorner).toHaveBeenCalledWith(expect.objectContaining({current: 1, spreads: 5, stride: 1536, columns: 2,
+        rightToLeft: false, x: 1590, y: 900}), expect.any(Function));
+      turn(true);
+      expect(reader.nextPage).toHaveBeenCalledTimes(1);
+      turn(false);
+      expect(reader.prevPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the text alone away from the corners, while dragging, selecting or with a drawer open', () => {
+      for (const [overrides, event] of [
+        [{}, at(800, 450)], [{}, at(1590, 450)], [{}, at(1590, 900, 1)],
+        [{epubMenuService: {isDrawerOpen: () => true}}, at(1590, 900)],
+        [{bookModeActive: () => false}, at(1590, 900)],
+      ] as [Record<string, unknown>, MouseEvent][]) {
+        const {reader, openCorner} = readerWithCorner(overrides);
+        reader.onBookPointer(event);
+        expect(openCorner).not.toHaveBeenCalled();
+      }
+      const {reader, openCorner} = readerWithCorner();
+      const selection = vi.spyOn(window, 'getSelection').mockReturnValue({toString: () => 'trecho'} as Selection);
+      try {
+        reader.onBookPointer(at(1590, 900));
+        expect(openCorner).not.toHaveBeenCalled();
+      } finally { selection.mockRestore(); }
+    });
+  });
+
   it('leaves the HTML boundary to the original next/previous file navigation', () => {
     const reader = Object.create(BookReaderComponent.prototype), turn = vi.fn();
     Object.assign(reader, {pagingRevision:0, bookModeActive:() => true,

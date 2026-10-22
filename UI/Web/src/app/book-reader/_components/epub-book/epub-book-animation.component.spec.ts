@@ -2,7 +2,9 @@ import {TestBed} from '@angular/core/testing';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {BOOK_FACTORY} from '../../../manga-reader/_components/book-renderer/book-renderer.component';
 import {FlipSetting} from '../../../_vendor/page-flip/Settings';
-import {EpubBookAnimationComponent, EpubBookTurn} from './epub-book-animation.component';
+import {EpubBookAnimationComponent, EpubBookCorner, EpubBookTurn} from './epub-book-animation.component';
+
+let liftsCorner = true;
 
 class FakeBook {
   handlers = new Map<string, (e: {data: unknown}) => void>();
@@ -11,16 +13,21 @@ class FakeBook {
   turnToPage = vi.fn();
   setForcePortrait = vi.fn();
   destroy = vi.fn();
+  state = 'read';
+  // The engine lifts the corner when the pointer is in its corner box, as PageFlip.userMove does
+  userMove = vi.fn(() => { if (this.lifts) this.emit('changeState', this.state = 'fold_corner'); });
+  getState = vi.fn(() => this.state);
+  lifts = liftsCorner;
   constructor(readonly root: HTMLElement, readonly settings: Partial<FlipSetting>) {}
   on(event: string, callback: (e: {data: unknown}) => void) { this.handlers.set(event, callback); return this; }
   loadFromHTML(pages: HTMLElement[]) { this.pages = pages; this.emit('flip', 0); this.emit('changeState', 'read'); }
-  emit(event: string, data: unknown) { this.handlers.get(event)?.({data}); }
+  emit(event: string, data: unknown) { if (event === 'changeState') this.state = data as string; this.handlers.get(event)?.({data}); }
 }
 
 describe('EPUB transient page turn', () => {
   let books: FakeBook[], frame: FrameRequestCallback, reduced: boolean;
   beforeEach(() => {
-    books = []; reduced = false;
+    books = []; reduced = false; liftsCorner = true;
     vi.stubGlobal('matchMedia', () => ({get matches() { return reduced; }, addEventListener: vi.fn(), removeEventListener: vi.fn()}));
     TestBed.configureTestingModule({providers: [{provide: BOOK_FACTORY, useValue: (root: HTMLElement, settings: Partial<FlipSetting>) => {
       const book = new FakeBook(root, settings); books.push(book); return book;
@@ -159,5 +166,96 @@ describe('EPUB transient page turn', () => {
     expect(request.source.style.visibility).toBe('visible');
     expect(request.source.style.getPropertyPriority('visibility')).toBe(priority);
     expect(commit).not.toHaveBeenCalled();
+  });
+
+  describe('corner under the mouse (L5)', () => {
+    function corner(overrides: Partial<EpubBookCorner> = {}) {
+      const {fixture, component, request} = create();
+      const cornerRequest: EpubBookCorner = {source: request.source, area: request.area, current: 1, spreads: 4,
+        stride: 1536, columns: 2, rightToLeft: false, x: 1590, y: 905, ...overrides};
+      return {fixture, component, request, cornerRequest, onTurn: vi.fn()};
+    }
+    const lefts = (book: FakeBook) => book.pages.map(page => page.querySelector<HTMLElement>('.book-content')?.style.left ?? 'blank');
+
+    it('lifts the corner with an interactive book of the neighbouring spreads over the hidden live text', () => {
+      const {component, cornerRequest, onTurn} = corner();
+      expect(component.openCorner(cornerRequest, onTurn)).toBe(true);
+      const book = books[0];
+      expect(book.settings.useMouseEvents).toBe(true);
+      expect(book.settings.showPageCorners).toBe(true);
+      expect(book.settings.startPage).toBe(2);
+      expect(lefts(book)).toEqual(['0px', '0px', '-1536px', '-1536px', '-3072px', '-3072px']);
+      expect(book.userMove).toHaveBeenCalledWith(expect.objectContaining({x: expect.any(Number), y: expect.any(Number)}), false);
+      expect(cornerRequest.source.style.visibility).toBe('hidden');
+      expect(book.root.hasAttribute('inert')).toBe(false);
+      expect(book.root.style.pointerEvents).toBe('auto');
+      expect(component.cornerOpen()).toBe(true);
+      expect(onTurn).not.toHaveBeenCalled();
+    });
+
+    it('commits one turn in the reading direction when a drag crosses the spine', async () => {
+      const {component, cornerRequest, onTurn} = corner();
+      component.openCorner(cornerRequest, onTurn);
+      books[0].emit('changeState', 'user_fold'); books[0].emit('flip', 4); books[0].emit('changeState', 'read');
+      await Promise.resolve();
+      expect(onTurn).toHaveBeenCalledExactlyOnceWith(true);
+      expect(books[0].destroy).toHaveBeenCalledTimes(1);
+      expect(component.cornerOpen()).toBe(false);
+    });
+
+    it('lays the page down without a turn when the drag is given up or the mouse leaves the corner', async () => {
+      const {component, cornerRequest, onTurn} = corner();
+      component.openCorner(cornerRequest, onTurn);
+      books[0].emit('changeState', 'user_fold'); books[0].emit('changeState', 'read');
+      await Promise.resolve();
+      expect(onTurn).not.toHaveBeenCalled();
+      expect(books[0].destroy).toHaveBeenCalledTimes(1);
+      expect(cornerRequest.source.style.visibility).toBe('');
+      expect(component.cornerOpen()).toBe(false);
+    });
+
+    it('offers blank sheets past the last spread, so the drag can open the next file', () => {
+      const {component, cornerRequest, onTurn} = corner({current: 3});
+      component.openCorner(cornerRequest, onTurn);
+      expect(books[0].pages.slice(4).every(page => page.classList.contains('epub-book-blank'))).toBe(true);
+      expect(lefts(books[0]).slice(0, 4)).toEqual(['-3072px', '-3072px', '-4608px', '-4608px']);
+    });
+
+    it('puts the next spread on the left in RTL and maps a left turn to forward', async () => {
+      const {component, cornerRequest, onTurn} = corner({rightToLeft: true, x: 10});
+      component.openCorner(cornerRequest, onTurn);
+      expect(lefts(books[0])).toEqual(['-3072px', '-3072px', '-1536px', '-1536px', '0px', '0px']);
+      books[0].emit('changeState', 'user_fold'); books[0].emit('flip', 0); books[0].emit('changeState', 'read');
+      await Promise.resolve();
+      expect(onTurn).toHaveBeenCalledExactlyOnceWith(true);
+    });
+
+    it('gives way to the keyboard while only lifted, and absorbs it while dragging', () => {
+      const {component, request, cornerRequest, onTurn} = corner();
+      component.openCorner(cornerRequest, onTurn);
+      expect(component.isTurning).toBe(false);
+      expect(component.turn(request, vi.fn())).toBe(true);
+      expect(books[0].destroy).toHaveBeenCalledTimes(1);
+      expect(books).toHaveLength(2);
+      component.cancel();
+      component.openCorner(cornerRequest, onTurn);
+      books[2].emit('changeState', 'user_fold');
+      expect(component.isTurning).toBe(true);
+    });
+
+    it('does not mount when the engine leaves the point outside its corner, with reduced motion or during a turn', () => {
+      const {component, request, cornerRequest, onTurn} = corner();
+      liftsCorner = false;
+      expect(component.openCorner(cornerRequest, onTurn)).toBe(false);
+      expect(books[0].destroy).toHaveBeenCalledTimes(1);
+      expect(cornerRequest.source.style.visibility).toBe('');
+      liftsCorner = true;
+      reduced = true;
+      expect(component.openCorner(cornerRequest, onTurn)).toBe(false);
+      reduced = false;
+      component.turn(request, vi.fn());
+      expect(component.openCorner(cornerRequest, onTurn)).toBe(false);
+      expect(books).toHaveLength(2);
+    });
   });
 });

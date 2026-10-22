@@ -138,7 +138,7 @@ await open('/login');
 const {authKeys, ...persisted} = user;
 await evaluate(`localStorage.setItem('kavita-user', ${JSON.stringify(JSON.stringify(persisted))}); true`);
 
-const only = process.argv.includes('--epub-reflow-only') || process.argv.includes('--epub-l4-only');
+const only = process.argv.includes('--epub-reflow-only') || process.argv.includes('--epub-l4-only') || process.argv.includes('--epub-l5-only');
 if (!only) {
 // V1: book mode off, a PDF opens in the PDF reader, on the page the image reader and the tablet saved
 await setProgress(pdf, 2);
@@ -202,16 +202,22 @@ if (process.argv.includes('--epub-clipping')) {
 }
 }
 
-if (!process.argv.includes('--epub-l4-only')) {
+if (!process.argv.includes('--epub-l4-only') && !process.argv.includes('--epub-l5-only')) {
 const {runEpubReflowTests} = await import('./epub-reflow.e2e.mjs');
 await runEpubReflowTests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
   evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
 }
 
-if (!process.argv.includes('--epub-reflow-only')) {
+if (!process.argv.includes('--epub-reflow-only') && !process.argv.includes('--epub-l5-only')) {
 const {runEpubL4Tests} = await import('./epub-l4.e2e.mjs');
 await runEpubL4Tests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
   evaluate, open, key, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
+}
+
+if (!process.argv.includes('--epub-reflow-only') && !process.argv.includes('--epub-l4-only')) {
+const {runEpubL5Tests} = await import('./epub-l5.e2e.mjs');
+await runEpubL5Tests({api, chapter: await chapterOf('Livro EPUB'), libraryId, route, check, until,
+  evaluate, open, send, sleep, progressPosts, bookModeKey: BOOK_MODE_KEY});
 }
 
 socket.close();

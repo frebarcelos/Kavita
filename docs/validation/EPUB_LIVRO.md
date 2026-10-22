@@ -295,3 +295,20 @@ Os destaques já faziam parte do HTML clonado: a folha que vira mostra o destaqu
 Durante o ensaio, uma correção para manter o deslocamento ao recarregar o HTML depois de criar um destaque foi escrita e **revertida**: o diagnóstico mostrou que o leitor não mudava de dupla (3328 → 3328) e que a falha vinha do próprio teste, que selecionava um parágrafo começado na dupla anterior. O seletor do teste foi corrigido.
 
 Resultado: 138 testes web (inclusive animação até dupla distante, fechamento do menu antes da virada, `turnTo` e `goToPart`), lint sem erros e **164/164 checks e2e** com `-MeasureEpubClipping`, contra a imagem `kavita-fork:fork-v1.1-50-g11986f5fd` com a interface local. Sem aceite visual e sem deploy.
+
+## L5: ponta que dobra e arraste do canto
+
+Implementação local de 2026-10-22, sem deploy. Cenário novo: [epub-l5.e2e.mjs](../../scripts/e2e/epub-l5.e2e.mjs) (`run.ps1 -EpubL5Only`), com mouse real pelo protocolo do Chrome.
+
+O motor PageFlip já trata a dobra ao passar o mouse, o arraste e a regra de soltar: vira se a ponta cruzou a lombada; senão, volta, emitindo só `user_fold` e `read`, sem `flip`. O desenho:
+
+1. O leitor procura o canto pela janela, porque a camada de toque para paginar (20% da largura de cada lado) cobre os cantos. A área de canto é a mesma do motor: um quinto da diagonal da página, a partir de cada borda externa. Não abre com botão apertado, seleção, painel aberto, virada em curso ou movimento reduzido.
+2. `EpubBookAnimationComponent.openCorner` monta um livro interativo com as duplas anterior, atual e seguinte (em branco além do HTML), com o mouse ligado, e esconde o texto vivo. Passa ao motor o ponto que trouxe o mouse, e desmonta se o motor não levantar o canto.
+3. `flip` seguido de `read` confirma a virada pelo mesmo `nextPage`/`prevPage` das setas, o que inclui abrir o HTML vizinho. Um `read` sem `flip` (desistência ou mouse fora do canto) desmonta sem tocar no leitor.
+4. Enquanto o livro está sob o mouse, `.tap-to-paginate.epub-book-corner` deixa o mouse passar. Uma ponta só levantada cede ao teclado; durante o arraste, os comandos são absorvidos.
+
+RED com o build da L4: o canto não levantava e os arrastes não viravam (cinco falhas). Testes de unidade RED com stubs (`openCorner` devolvendo `false`; `onBookPointer` vazio).
+
+O ensaio corrigiu dois enganos do próprio teste: a seleção começava dentro da camada de toque, onde selecionar com o mouse nunca funcionou, e depois na linha curta do parágrafo de links acrescentado pela fixture da L4, além do fim do texto. Um experimento com o listener da L5 desligado reproduziu a falha, confirmando que ela não vinha da L5. O progresso salvo ao abrir o último HTML é o total do capítulo (marca de concluído), por isso o teste confere o título do arquivo aberto.
+
+Resultado: 147 testes web, lint sem erros e **174/174 checks e2e** com `-MeasureEpubClipping`: hover sem gravação, arraste completo com uma gravação, arraste desistido sem gravação, volta pelo canto esquerdo, seleção fora dos cantos e passagem para o próximo HTML. Limites: só mouse (toque e caneta seguem os gestos existentes); a seleção por mouse dentro da camada de toque continua impossível, como antes; sem aceite no PC e sem deploy.

@@ -13,7 +13,9 @@ param(
     # Focused RED/GREEN for appearance preservation; the ordinary runner still runs all reader scenarios
     [switch]$EpubReflowOnly,
     # Focused RED/GREEN for selection, highlights and navigation with the book on (L4)
-    [switch]$EpubL4Only
+    [switch]$EpubL4Only,
+    # Focused RED/GREEN for the corner fold and drag of the book (L5)
+    [switch]$EpubL5Only
 )
 $ErrorActionPreference = 'Stop'
 # Fork (item 7.1): reader end-to-end test. A disposable Kavita on 127.0.0.1 with a synthetic library mounted read-only
@@ -85,6 +87,7 @@ try {
     if ($MeasureEpubClipping) { $readerArgs += '--epub-clipping' }
     if ($EpubReflowOnly) { $readerArgs += '--epub-reflow-only' }
     if ($EpubL4Only) { $readerArgs += '--epub-l4-only' }
+    if ($EpubL5Only) { $readerArgs += '--epub-l5-only' }
     npm exec --yes --package=node@24.15.0 -- node scripts/e2e/reader.e2e.mjs @readerArgs
     $failed = $LASTEXITCODE -ne 0
 } finally {

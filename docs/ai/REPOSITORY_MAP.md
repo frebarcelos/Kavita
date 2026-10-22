@@ -68,6 +68,7 @@ Snapshot estrutural em 2026-10-17, antes desta documentação: 3854 arquivos for
 | Virada de EPUB (L2, implementação local em aceite) | book-reader/_components/epub-book/epub-book-pages.ts e epub-book-animation.component.ts, com testes; ganchos em book-reader; scripts/e2e/epub-animation.e2e.mjs e epub-clipping.e2e.mjs; `scripts/e2e/run.ps1 -MeasureEpubClipping` |
 | Aparência sem perder o lugar (L3, implementação local em aceite) | âncora de texto e alinhamento da dupla em book-reader.component.ts; book-reader.pagination.spec.ts; scripts/e2e/epub-reflow.e2e.mjs; `scripts/e2e/run.ps1 -EpubReflowOnly` |
 | Seleção, destaques e links com o livro (L4, implementação local) | `closeSelection`, `turnTo` e `goToPart` em book-reader.component.ts; destinos distantes em epub-book-animation.component.ts; scripts/e2e/epub-l4.e2e.mjs; `scripts/e2e/run.ps1 -EpubL4Only` |
+| Ponta que dobra e arraste do canto (L5, implementação local) | `openCorner` em epub-book-animation.component.ts; `onBookPointer` e `.tap-to-paginate.epub-book-corner` em book-reader; scripts/e2e/epub-l5.e2e.mjs; `scripts/e2e/run.ps1 -EpubL5Only` |
 | Cliente HTTP web | UI/Web/src/app/_services, _interceptors e _models |
 | Kover Android | [Contexto próprio](KOVER_CONTEXT.md); código na pasta irmã ../kover |
 

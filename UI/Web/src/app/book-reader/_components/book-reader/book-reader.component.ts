@@ -787,6 +787,11 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
       )
       .subscribe();
 
+    // Fork (L5): the tap areas cover the corners, so the corner is found from the window
+    fromEvent<MouseEvent>(window, 'mousemove')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => this.onBookPointer(event));
+
     const mouseUp$ = fromEvent<MouseEvent>(this.bookContainerElemRef().nativeElement, 'mouseup');
     const touchEnd$ = fromEvent<TouchEvent>(this.bookContainerElemRef().nativeElement, 'touchend');
 
@@ -1721,6 +1726,34 @@ export class BookReaderComponent implements OnInit, AfterViewInit, OnDestroy, Af
     if (pageNumber === this.pageNum() && part && this.turnTo(this.readerService.scopeBookReaderXpath(part))) return;
     this.setPageNum(pageNumber);
     this.loadPage(part ?? undefined);
+  }
+
+  /**
+   * Fork (L5): with the book on, the mouse near an outer corner of the spread mounts the book under it, so the corner
+   * lifts and can be dragged. The box is the engine's own: a fifth of the page diagonal from each outer edge.
+   */
+  onBookPointer(event: MouseEvent) {
+    if (!this.bookModeActive() || event.buttons !== 0 || this.writingStyle() !== WritingStyle.Horizontal) return;
+    const animation = this.bookAnimation();
+    if (!animation || animation.cornerOpen() || animation.isTurning || this.isLoading()) return;
+    if (this.epubMenuService.isDrawerOpen() || window.getSelection()?.toString()) return;
+
+    const container = this.bookContainerElemRef().nativeElement, content = this.bookContentElemRef().nativeElement;
+    const area = container.getBoundingClientRect(), text = content.getBoundingClientRect();
+    const columns = this.bookTwoPages() ? 2 : 1;
+    const reach = Math.hypot(area.width / columns, text.height) / 5;
+    const x = event.clientX, y = event.clientY;
+    const nearSide = x >= area.left && x <= area.right && (x - area.left <= reach || area.right - x <= reach);
+    const nearEdge = y >= text.top && y <= text.bottom && (y - text.top <= reach || text.bottom - y <= reach);
+    if (!nearSide || !nearEdge) return;
+
+    const [current, total, stride] = this.getVirtualPage();
+    animation.openCorner({source: content, area: container, current: current - 1, spreads: total, stride, columns,
+      rightToLeft: this.readingDirection() === ReadingDirection.RightToLeft, x, y}, forward => {
+      this.pagingRevision++;
+      if (forward) this.nextPage();
+      else this.prevPage();
+    });
   }
 
   /** Fork (L4): a turn moves the text away from the selection; its menu would act on text no longer on screen */
