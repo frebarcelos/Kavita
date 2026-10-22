@@ -1,6 +1,14 @@
 # Estado atual e pendências
 
-Atualizado em 2026-10-20. Este é o resumo para retomar o trabalho. O detalhe item a item, com evidências e commits, fica no [plano de robustez](../plans/ROBUSTEZ_E_MELHORIAS.md). Confira sempre o código, a configuração e o servidor em execução antes de agir: este texto pode ficar desatualizado.
+Atualizado em 2026-10-21. Este é o resumo para retomar o trabalho. O detalhe item a item, com evidências e commits, fica no [plano de robustez](../plans/ROBUSTEZ_E_MELHORIAS.md). Confira sempre o código, a configuração e o servidor em execução antes de agir: este texto pode ficar desatualizado.
+
+## Alteração local em revisão (2026-10-21)
+
+EPUB como livro na web: **L1 e L2 aprovadas visualmente pelo usuário em 2026-10-21**, sem deploy. A L2 mantém texto vivo: após a reprovação inicial do recorte, o usuário escolheu corrigi-lo, e a geometria agora coincide com o leitor, inclusive no maior EPUB e no CSS de editor. A camada PageFlip existe somente durante a virada; no fim o leitor avança e salva uma vez. Uma/duas páginas, LTR/RTL, teclado, roda, botão e toque passaram no Chrome. Movimento reduzido usa o salto imediato da L1. **L3 aprovada pelo usuário em 2026-10-22, sem deploy**: mudar fonte, entrelinha, margem, tema ou layout, inclusive durante uma virada, mantém o texto do topo da dupla (decisão do usuário de 2026-10-21); 130 testes web e 137 checks e2e passaram. Visual aprovado pelo usuário numa prévia local com o acervo real; o defeito das colunas vizinhas durante a virada foi corrigido (131 testes web, 143 checks e2e). Achado da prévia, corrigido em 2026-10-22 com autorização: o backup automático passou a incluir `config/themes` (tema personalizado do site); teste de backup/restauração com 12 checks verde e backup real do principal conferido com o tema. Consulte [a validação](../validation/EPUB_LIVRO.md) e [o plano](../plans/EPUB_LIVRO.md). L4 e L5 não iniciadas; L6 exige escolher as opções de texto, e L7 é opcional.
+
+Validação local: 104 testes web, 94 de leitura/releitura no servidor e 58 checks e2e (16 PDF + 42 EPUB) passaram. O ensaio corrigiu também a perda de posição no primeiro HTML do EPUB: `pageNum == 0` com `bookScrollId` válido agora é salvo. Contrato de progresso e Kover mantidos. Há capturas sintéticas no registro; a imagem usada no e2e é descartável e não serve para deploy.
+
+Validação mais recente da L2: **126 testes web e 107 checks e2e passaram** (58 anteriores, 43 de animação e seis de recorte); build de produção e lint dos arquivos alterados passaram, com avisos anteriores. No maior EPUB (35 MB), cinco montagens de recortes tiveram máximo de 14,8 ms e zero diferenças geométricas; uma virada completa levou 652 ms, com uma gravação e o índice HTML preservado. No sintético, viradas levaram 610–652 ms. Os ambientes descartáveis, inclusive a cópia pessoal, foram removidos após conferir o hash do original. O principal não foi alterado. A imagem de entrega de um worktree limpo continua pendente; a UI foi validada por montagem somente leitura sobre a imagem de testes da L1.
 
 ## Como está em produção
 
@@ -99,7 +107,7 @@ Números das suítes na última execução: Kavita serviços 3046 (sem falhas), 
 
 **Fora do escopo por enquanto:**
 - V3: não é necessário, porque o V2 resolveu o tempo;
-- V4: EPUB como livro no PC;
+- V4: L4 a L7 do [EPUB como livro no PC](../plans/EPUB_LIVRO.md); L1 a L3 estão aprovadas, sem deploy;
 - as melhorias futuras F1 a F19 do plano.
 
 ## Cuidados aprendidos nesta fase

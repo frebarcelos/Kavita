@@ -49,7 +49,7 @@ Fonte de capacidades gerais: [README do Kover upstream](https://github.com/rodon
 6. Exclusão manual com rótulo explícito “Remover download deste dispositivo”. Exclusão automática depois de lido será opcional, desligada por padrão e só implementada se desejada após validar a operação manual.
 
 O bind mount deve incluir apenas o acervo, sem uma segunda montagem gravável da mesma pasta, links que escapem da raiz ou montagens aninhadas sem verificação. A opção somente leitura impede escrita pelo container; conferir a montagem efetiva e não apenas o YAML. [Documentação Docker](https://docs.docker.com/engine/storage/bind-mounts/).
-
+  
 O papel Read Only do Kavita limita gerenciamento de conta, conforme PolicyConstants.cs; não equivale a uma biblioteca protegida pelo sistema operacional.
 
 ## Separação dos dados

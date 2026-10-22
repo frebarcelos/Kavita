@@ -15,6 +15,7 @@ Este conjunto é a memória versionada do projeto. A entrada automática para ag
 | [Robustez e melhorias](../plans/ROBUSTEZ_E_MELHORIAS.md) | Plano em fases para servidor, web, implantação e tablet: riscos, deficiências, testes, aceites e decisões pendentes |
 | [Atualizar do upstream](../ATUALIZAR_UPSTREAM.md) | Roteiro para trazer versões novas do Kavita e do Kover: pontos quentes, migrações, suítes, ensaio no clone com comparação de IDs e progresso |
 | [Melhorias pós-v1.0](../plans/MELHORIAS.md) | Próximas melhorias dos dois projetos, incluindo a animação de virada de página no Kover, com referências |
+| [EPUB como livro](../plans/EPUB_LIVRO.md) | Virada de página no EPUB da web, mantendo fonte, tema e demais preferências ajustáveis dentro do livro |
 | [Organização do acervo](../plans/ORGANIZACAO_ACERVO.md) | Diagnóstico das três pastas e entregas para organizar séries, edições, livros e exclusões do YACReader |
 | [Validação por pastas](../validation/PASTAS.md) | Modo optativo, testes, piloto com 51 arquivos, atualização de esquema e limites de implantação |
 | [Pastas no principal](../validation/PASTAS_PRINCIPAL.md) | Migração aplicada, 931 arquivos, preservação dos dados, backup/restauração e pausa dos clientes antigos |
