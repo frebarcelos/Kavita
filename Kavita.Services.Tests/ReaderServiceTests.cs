@@ -90,6 +90,48 @@ public class ReaderServiceTests(ITestOutputHelper testOutputHelper) : AbstractDb
 
     #region SaveReadingProgress
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("id(\"p7\")", true)]
+    [InlineData("//body/p[7]", true)]
+    public async Task SaveReadingProgress_FirstHtmlFile_PreservesTextPositionWithoutCreatingEmptyProgress(
+        string? bookScrollId, bool shouldCreate)
+    {
+        var (unitOfWork, context, _) = await CreateDatabase();
+        var readerService = Setup(unitOfWork);
+        var library = new LibraryBuilder("Synthetic EPUB", LibraryType.Book).Build();
+        context.Library.Add(library);
+        await context.SaveChangesAsync();
+        context.Series.Add(new SeriesBuilder("Synthetic book")
+            .WithLibraryId(library.Id)
+            .WithVolume(new VolumeBuilder(Parser.LooseLeafVolume)
+                .WithChapter(new ChapterBuilder(Parser.DefaultChapter).WithPages(2).Build())
+                .Build())
+            .Build());
+        context.AppUser.Add(new AppUser { UserName = "reader", Libraries = [library] });
+        await context.SaveChangesAsync();
+        JobStorage.Current = new InMemoryStorage();
+
+        Assert.True(await readerService.SaveReadingProgress(new ProgressDto
+        {
+            ChapterId = 1, PageNum = 0, BookScrollId = bookScrollId,
+            VolumeId = 1, SeriesId = 1, LibraryId = 1,
+        }, 1));
+
+        var progress = await unitOfWork.AppUserProgressRepository.GetUserProgressAsync(1, 1);
+        if (shouldCreate)
+        {
+            Assert.NotNull(progress);
+            Assert.Equal(0, progress.PagesRead);
+            Assert.Equal(bookScrollId, progress.BookScrollId);
+        }
+        else
+        {
+            Assert.Null(progress);
+        }
+    }
+
     [Fact]
     public async Task SaveReadingProgress_ShouldCreateNewEntity()
     {

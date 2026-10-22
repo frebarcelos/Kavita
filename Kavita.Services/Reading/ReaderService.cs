@@ -225,8 +225,9 @@ public class ReaderService(IUnitOfWork unitOfWork, ILogger<ReaderService> logger
             var userProgress = await unitOfWork.AppUserProgressRepository.GetUserProgressAsync(progressDto.ChapterId, userId, ct);
             var oldProgress = userProgress?.PagesRead ?? 0;
 
-            // Don't create an empty progress record if there isn't any progress. This prevents Last Read date from being updated when opening a chapter
-            if (userProgress == null && progressDto.PageNum == 0) return true;
+            // Page zero can contain real EPUB progress: its position is inside the first HTML file.
+            // Keep avoiding empty records for readers that only report the first page.
+            if (userProgress == null && progressDto.PageNum == 0 && string.IsNullOrEmpty(progressDto.BookScrollId)) return true;
 
             // Fork: the most recent reading wins. A device that read offline sends, later, when it read; a reading
             // older than the saved one is not applied, and the device then fetches the newer progress. Clients
