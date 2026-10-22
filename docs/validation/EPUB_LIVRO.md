@@ -272,3 +272,5 @@ O usuário apontou dois pontos no principal:
 2. **Margem sem efeito no meio.** O espaço entre as páginas era fixo em 64 px; a margem do leitor só afastava as bordas externas. Agora o espaço do meio é 64 px (lombada) + 2 × margem, então cada página tem a margem dos dois lados e mais 32 px junto à lombada (`epub-book-layout.ts`).
 
 RED: unidade (`epub-book-layout.spec.ts`, 64 em vez de 224) e e2e (meio de 64 px com margem de 160 px; imagem sem mistura no tema Papel). GREEN: 133 testes web e **147/147 checks e2e** com `-MeasureEpubClipping`, inclusive recorte sem diferenças e, com margem de 160 px, meio de 384 px. Na mesma rodada, o roteiro passou a esperar todas as pastas da fixture: esperar só as do PDF e do EPUB começava os cenários de PDF antes do fim do scan e reprovava oito checks de PDF.
+
+Em 2026-10-22, após o deploy de `kavita-fork:fork-v1.1-50-g11986f5fd`, **o usuário confirmou no principal** que a capitular no tema Papel e a margem junto à lombada funcionam.
